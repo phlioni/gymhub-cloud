@@ -8,7 +8,8 @@ import {
   Package,
   Settings,
   LogOut,
-  Dumbbell
+  Dumbbell,
+  PanelLeft,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -24,9 +25,10 @@ const navigation = [
 interface SidebarProps {
   organizationName?: string;
   logoUrl?: string | null;
+  isOpen: boolean;
 }
 
-export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
+export const Sidebar = ({ organizationName, logoUrl, isOpen }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -40,8 +42,12 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
   };
 
   return (
-    // CORREÇÃO AQUI: Adicionado h-screen para altura total e sticky top-0 para fixar
-    <div className="flex flex-col w-72 bg-sidebar border-r border-sidebar-border shadow-sm h-screen sticky top-0">
+    <div
+      className={cn(
+        "flex flex-col bg-sidebar border-r border-sidebar-border shadow-sm h-screen sticky top-0 transition-all duration-300",
+        isOpen ? "w-72" : "w-0 md:w-20"
+      )}
+    >
       <div className="p-6 border-b border-sidebar-border bg-gradient-to-br from-primary/5 to-transparent">
         <div className="flex items-center gap-3">
           {logoUrl ? (
@@ -51,7 +57,7 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
               <Dumbbell className="h-7 w-7 text-white" />
             </div>
           )}
-          <div className="flex flex-col">
+          <div className={cn("flex flex-col", { "hidden": !isOpen && "md:hidden" })}>
             <span className="text-lg font-bold text-foreground tracking-tight">
               {organizationName || "GymHub"}
             </span>
@@ -72,16 +78,17 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
                 "group flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
                   ? "bg-gradient-to-r from-primary to-primary/90 text-white shadow-md shadow-primary/25"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent",
+                !isOpen && "md:justify-center"
               )}
             >
               <Icon className={cn(
                 "h-5 w-5 transition-transform duration-200",
                 isActive ? "scale-110" : "group-hover:scale-105"
               )} />
-              <span className="font-medium">{item.name}</span>
+              <span className={cn("font-medium", { "hidden": !isOpen && "md:hidden" })}>{item.name}</span>
               {isActive && (
-                <div className="ml-auto h-2 w-2 rounded-full bg-white/90 shadow-sm animate-pulse" />
+                <div className={cn("ml-auto h-2 w-2 rounded-full bg-white/90 shadow-sm animate-pulse", { "hidden": !isOpen && "md:hidden" })} />
               )}
             </Link>
           );
@@ -91,11 +98,11 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
       <div className="p-4 border-t border-sidebar-border bg-gradient-to-t from-sidebar-accent/30 to-transparent">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 rounded-xl"
+          className={cn("w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 rounded-xl", { "md:justify-center": !isOpen })}
           onClick={handleSignOut}
         >
-          <LogOut className="h-5 w-5 mr-3" />
-          <span className="font-medium">Sair</span>
+          <LogOut className={cn("h-5 w-5", { "md:mr-0": !isOpen, "mr-3": isOpen })} />
+          <span className={cn("font-medium", { "hidden": !isOpen && "md:hidden" })}>Sair</span>
         </Button>
       </div>
     </div>

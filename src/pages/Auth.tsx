@@ -15,7 +15,6 @@ const Auth = () => {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    // Verifica se o usuário já está logado
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -69,15 +68,15 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
-      <Card className="w-full max-w-md shadow-2xl border-primary/20">
+      <Card className="w-full max-w-sm md:max-w-md shadow-2xl border-primary/20">
         <CardHeader className="space-y-4 text-center pb-8">
           <div className="flex justify-center">
             <img src={gymhubLogo} alt="GymHub Logo" className="w-24 h-24" />
           </div>
-          <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <CardTitle className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             GymHub
           </CardTitle>
-          <CardDescription className="text-base">
+          <CardDescription className="text-sm md:text-base">
             Acesse sua conta para continuar
           </CardDescription>
         </CardHeader>

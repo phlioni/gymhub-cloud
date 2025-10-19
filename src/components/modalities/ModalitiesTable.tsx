@@ -91,43 +91,75 @@ export const ModalitiesTable = ({ modalities, loading, onRefresh }: ModalitiesTa
 
   return (
     <>
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Preço</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {modalities.map((modality) => (
-              <TableRow key={modality.id}>
-                <TableCell className="font-medium">{modality.name}</TableCell>
-                <TableCell>{modality.description || "N/A"}</TableCell>
-                <TableCell>{formatPrice(modality.price, modality.pricing_type)}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleSchedulesClick(modality)}>
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Agenda
-                  </Button>
+      <div className="hidden md:block">
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Preço</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {modalities.map((modality) => (
+                <TableRow key={modality.id}>
+                  <TableCell className="font-medium">{modality.name}</TableCell>
+                  <TableCell>{modality.description || "N/A"}</TableCell>
+                  <TableCell>{formatPrice(modality.price, modality.pricing_type)}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => handleSchedulesClick(modality)}>
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Agenda
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(modality)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(modality.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      </div>
+
+      <div className="md:hidden space-y-4">
+        {modalities.map((modality) => (
+          <Card key={modality.id} className="w-full">
+            <div className="p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold">{modality.name}</h3>
+                  <p className="text-sm text-muted-foreground">{modality.description || 'N/A'}</p>
+                </div>
+                <div className="flex space-x-2">
                   <Button variant="ghost" size="icon" onClick={() => handleEditClick(modality)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(modality.id)}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(modality.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+                </div>
+              </div>
+              <div className="flex justify-between items-center mt-4">
+                <p className="text-sm">{formatPrice(modality.price, modality.pricing_type)}</p>
+                <Button variant="outline" size="sm" onClick={() => handleSchedulesClick(modality)}>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Agenda
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       <EditModalityDialog
         modality={selectedModality}
