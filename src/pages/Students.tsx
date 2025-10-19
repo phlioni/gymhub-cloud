@@ -7,6 +7,7 @@ import { Plus, Search } from "lucide-react";
 import { StudentsTable } from "@/components/students/StudentsTable";
 import { AddStudentDialog } from "@/components/students/AddStudentDialog";
 import { toast } from "sonner";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 
 const Students = () => {
   const navigate = useNavigate();
@@ -50,7 +51,6 @@ const Students = () => {
   const loadStudents = async () => {
     setLoading(true);
     try {
-      // MODIFICAÇÃO: Busca matrículas com preço e nome da modalidade
       const { data, error } = await supabase
         .from('students')
         .select(`
@@ -69,7 +69,6 @@ const Students = () => {
     }
   };
 
-  // Filtra os alunos com base no termo de busca
   const filteredStudents = useMemo(() => {
     if (!searchTerm) {
       return students;
@@ -82,9 +81,9 @@ const Students = () => {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
       <main className="flex-1 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="space-y-1">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="space-y-2">
               <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
                 Alunos
               </h1>
@@ -92,8 +91,8 @@ const Students = () => {
                 Gerencie os membros da sua academia
               </p>
             </div>
-            <div className="flex flex-col-reverse md:flex-row items-stretch gap-3">
-              <div className="relative w-full">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full md:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nome..."
@@ -102,7 +101,7 @@ const Students = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all">
+              <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all hidden md:inline-flex">
                 <Plus className="h-5 w-5 md:mr-2" />
                 <span className="hidden md:inline font-medium">Adicionar Aluno</span>
               </Button>
@@ -122,6 +121,7 @@ const Students = () => {
             onSuccess={loadStudents}
           />
         </div>
+        <FloatingActionButton onClick={() => setShowAddDialog(true)} />
       </main>
     </div>
   );
