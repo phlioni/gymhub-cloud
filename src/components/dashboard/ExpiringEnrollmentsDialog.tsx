@@ -1,11 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button"; // Import Button
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { differenceInDays, startOfDay } from 'date-fns';
+import { User } from "lucide-react"; // Import User icon
 
 interface ExpiringEnrollmentsDialogProps {
   open: boolean;
@@ -22,6 +25,7 @@ export const ExpiringEnrollmentsDialog = ({ open, onOpenChange }: ExpiringEnroll
   const [loading, setLoading] = useState(true);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate(); // Initialize navigate
 
   useEffect(() => {
     if (open) {
@@ -69,9 +73,16 @@ export const ExpiringEnrollmentsDialog = ({ open, onOpenChange }: ExpiringEnroll
     return differenceInDays(expiry, today);
   }
 
+  const handleGoToStudent = (studentName: string | undefined) => {
+    if (studentName) {
+      navigate(`/students?name=${encodeURIComponent(studentName)}`);
+      onOpenChange(false); // Close the dialog
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Matrículas a Vencer nos Próximos 10 Dias</DialogTitle>
           <DialogDescription>Alunos com matrículas vencendo nos próximos 10 dias.</DialogDescription>
@@ -81,14 +92,20 @@ export const ExpiringEnrollmentsDialog = ({ open, onOpenChange }: ExpiringEnroll
           {loading ? (<Skeleton className="w-full h-32" />) :
             filteredEnrollments.length > 0 ? (
               <Table>
-                <TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Telefone</TableHead><TableHead>Modalidade</TableHead><TableHead className="text-right">Vence em</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Telefone</TableHead><TableHead>Modalidade</TableHead><TableHead>Vence em</TableHead><TableHead className="text-right">Ação</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {filteredEnrollments.map((e, i) => (
                     <TableRow key={i}>
                       <TableCell className="font-medium">{e.students?.name}</TableCell>
                       <TableCell>{e.students?.phone_number || 'N/A'}</TableCell>
                       <TableCell>{e.modalities?.name}</TableCell>
-                      <TableCell className="text-right font-semibold text-accent">{`${getDaysRemaining(e.expiry_date)} dia(s)`}</TableCell>
+                      <TableCell className="font-semibold text-accent">{`${getDaysRemaining(e.expiry_date)} dia(s)`}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => handleGoToStudent(e.students?.name)}>
+                          <User className="h-4 w-4 mr-2" />
+                          Ir para Aluno
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { differenceInDays, startOfDay } from 'date-fns';
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, User } from "lucide-react"; // Import User icon
 
 interface OverdueEnrollmentsDialogProps {
     open: boolean;
@@ -24,6 +25,7 @@ export const OverdueEnrollmentsDialog = ({ open, onOpenChange }: OverdueEnrollme
     const [loading, setLoading] = useState(true);
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const navigate = useNavigate(); // Initialize navigate
 
     useEffect(() => {
         if (open) {
@@ -69,6 +71,13 @@ export const OverdueEnrollmentsDialog = ({ open, onOpenChange }: OverdueEnrollme
         }
     }
 
+    const handleGoToStudent = (studentName: string | undefined) => {
+        if (studentName) {
+            navigate(`/students?name=${encodeURIComponent(studentName)}`);
+            onOpenChange(false); // Close the dialog
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-3xl">
@@ -88,7 +97,11 @@ export const OverdueEnrollmentsDialog = ({ open, onOpenChange }: OverdueEnrollme
                                             <TableCell className="font-medium">{e.students?.name}</TableCell>
                                             <TableCell>{e.modalities?.name}</TableCell>
                                             <TableCell className="font-semibold text-destructive">{`${getDaysOverdue(e.expiry_date)} dia(s)`}</TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right space-x-2">
+                                                <Button size="sm" variant="outline" onClick={() => handleGoToStudent(e.students?.name)}>
+                                                    <User className="h-4 w-4 mr-2" />
+                                                    Ir para Aluno
+                                                </Button>
                                                 <Button size="sm" onClick={() => handleContact(e.students?.phone_number || null)}>
                                                     <MessageCircle className="h-4 w-4 mr-2" />
                                                     Cobrar

@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
@@ -11,6 +10,7 @@ import { toast } from "sonner";
 
 const Students = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
@@ -18,8 +18,12 @@ const Students = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    const nameParam = searchParams.get('name');
+    if (nameParam) {
+      setSearchTerm(nameParam);
+    }
     checkAuth();
-  }, []);
+  }, [searchParams]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();

@@ -13,6 +13,8 @@ interface Modality {
   name: string;
   description: string | null;
   created_at: string;
+  price: number | null;
+  pricing_type: string | null;
 }
 
 interface ModalitiesTableProps {
@@ -50,6 +52,23 @@ export const ModalitiesTable = ({ modalities, loading, onRefresh }: ModalitiesTa
     }
   };
 
+  const formatPrice = (price: number | null, pricingType: string | null) => {
+    if (price === null || price === undefined) {
+      return "N/A";
+    }
+    const formattedPrice = `R$ ${price.toFixed(2).replace('.', ',')}`;
+    switch (pricingType) {
+      case 'per_person':
+        return `${formattedPrice} / aluno`;
+      case 'per_hour':
+        return `${formattedPrice} / hora`;
+      case 'fixed':
+        return formattedPrice;
+      default:
+        return formattedPrice;
+    }
+  };
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -78,6 +97,7 @@ export const ModalitiesTable = ({ modalities, loading, onRefresh }: ModalitiesTa
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
+              <TableHead>Preço</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -86,6 +106,7 @@ export const ModalitiesTable = ({ modalities, loading, onRefresh }: ModalitiesTa
               <TableRow key={modality.id}>
                 <TableCell className="font-medium">{modality.name}</TableCell>
                 <TableCell>{modality.description || "N/A"}</TableCell>
+                <TableCell>{formatPrice(modality.price, modality.pricing_type)}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button variant="outline" size="sm" onClick={() => handleSchedulesClick(modality)}>
                     <Calendar className="h-4 w-4 mr-2" />

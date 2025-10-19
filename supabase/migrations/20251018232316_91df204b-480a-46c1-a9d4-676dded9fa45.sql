@@ -42,6 +42,8 @@ CREATE TABLE public.modalities (
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
+  price NUMERIC(10, 2),
+  pricing_type TEXT CHECK (pricing_type IN ('per_person', 'per_hour', 'fixed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

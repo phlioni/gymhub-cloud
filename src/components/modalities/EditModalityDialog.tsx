@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -11,6 +12,8 @@ interface Modality {
     id: string;
     name: string;
     description: string | null;
+    price: number | null;
+    pricing_type: string | null;
 }
 
 interface EditModalityDialogProps {
@@ -22,13 +25,15 @@ interface EditModalityDialogProps {
 
 export const EditModalityDialog = ({ modality, open, onOpenChange, onSuccess }: EditModalityDialogProps) => {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({ name: "", description: "" });
+    const [formData, setFormData] = useState({ name: "", description: "", price: "", pricing_type: "" });
 
     useEffect(() => {
         if (modality) {
             setFormData({
                 name: modality.name || "",
                 description: modality.description || "",
+                price: modality.price ? String(modality.price) : "",
+                pricing_type: modality.pricing_type || "",
             });
         }
     }, [modality]);
@@ -44,6 +49,8 @@ export const EditModalityDialog = ({ modality, open, onOpenChange, onSuccess }: 
                 .update({
                     name: formData.name,
                     description: formData.description || null,
+                    price: formData.price ? parseFloat(formData.price) : null,
+                    pricing_type: formData.pricing_type || null,
                 })
                 .eq('id', modality.id);
 
@@ -86,8 +93,38 @@ export const EditModalityDialog = ({ modality, open, onOpenChange, onSuccess }: 
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             disabled={loading}
-                            rows={4}
+                            rows={3}
                         />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="price">Preço (R$)</Label>
+                            <Input
+                                id="price"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Ex: 89.90"
+                                value={formData.price}
+                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                disabled={loading}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="pricing_type">Tipo de Preço</Label>
+                            <Select
+                                value={formData.pricing_type}
+                                onValueChange={(value) => setFormData({ ...formData, pricing_type: value })}
+                                disabled={loading}
+                            >
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="fixed">Valor Fixo</SelectItem>
+                                    <SelectItem value="per_person">Por Aluno</SelectItem>
+                                    <SelectItem value="per_hour">Por Hora</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
