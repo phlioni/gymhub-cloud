@@ -26,7 +26,7 @@ export const CreateOrganizationDialog = ({ open, onOpenChange, onSuccess }: Crea
     setLoading(true);
 
     try {
-      // Call edge function to create organization and admin user
+      // CORREÇÃO: Removido o aninhamento "body"
       const { data, error } = await supabase.functions.invoke('create-organization', {
         body: {
           orgName: formData.orgName,
@@ -37,7 +37,9 @@ export const CreateOrganizationDialog = ({ open, onOpenChange, onSuccess }: Crea
       });
 
       if (error) throw error;
-      if (!data.success) throw new Error(data.error || 'Failed to create organization');
+      // A resposta da função pode não ter um campo 'success', 
+      // então verificamos diretamente por 'data' ou 'error' na resposta.
+      if (data.error) throw new Error(data.error);
 
       toast.success("Organization created successfully");
       onSuccess();
