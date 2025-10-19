@@ -203,7 +203,7 @@ const SidebarContent = ({ data, onLinkClick }: { data: AppLayoutData | null; onL
                     onClick={handleSignOut}
                 >
                     <LogOut className="h-5 w-5 mr-3" />
-                    <span>Sai</span>
+                    <span>Sair</span>
                 </Button>
             </div>
         </>
