@@ -11,6 +11,7 @@ interface Student {
     name: string;
     cpf: string | null;
     birth_date: string | null;
+    phone_number: string | null; // Novo campo
 }
 
 interface EditStudentDialogProps {
@@ -26,15 +27,16 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
         name: "",
         cpf: "",
         birthDate: "",
+        phoneNumber: "", // Novo campo
     });
 
     useEffect(() => {
-        // Quando um aluno é selecionado para edição, preenche o formulário
         if (student) {
             setFormData({
                 name: student.name || "",
                 cpf: student.cpf || "",
                 birthDate: student.birth_date || "",
+                phoneNumber: student.phone_number || "", // Novo campo
             });
         }
     }, [student]);
@@ -51,6 +53,7 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                     name: formData.name,
                     cpf: formData.cpf || null,
                     birth_date: formData.birthDate || null,
+                    phone_number: formData.phoneNumber || null, // Novo campo
                 })
                 .eq('id', student.id);
 
@@ -76,44 +79,27 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                         Atualize as informações do aluno.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Nome *</Label>
-                        <Input
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            required
-                            disabled={loading}
-                        />
+                        <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="phoneNumber">Telefone (WhatsApp)</Label>
+                        <Input id="phoneNumber" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+5513999998888" disabled={loading} />
+                        <p className="text-xs text-muted-foreground">Formato internacional: +55 (DDD) (Número)</p>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="cpf">CPF</Label>
-                        <Input
-                            id="cpf"
-                            value={formData.cpf}
-                            onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                            placeholder="000.000.000-00"
-                            disabled={loading}
-                        />
+                        <Input id="cpf" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} placeholder="000.000.000-00" disabled={loading} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="birthDate">Data de Nascimento</Label>
-                        <Input
-                            id="birthDate"
-                            type="date"
-                            value={formData.birthDate}
-                            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                            disabled={loading}
-                        />
+                        <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={loading}>
-                            {loading ? "Salvando..." : "Salvar Alterações"}
-                        </Button>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
+                        <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar Alterações"}</Button>
                     </div>
                 </form>
             </DialogContent>

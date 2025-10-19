@@ -2,20 +2,18 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, CalendarClock, Bell, BellOff } from "lucide-react";
+import { Edit, Trash2, CalendarClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EditStudentDialog } from "./EditStudentDialog";
 import { RenewEnrollmentDialog } from "./RenewEnrollmentDialog";
-import { getEnrollmentStatus } from "@/utils/enrollmentStatus";
 
-// Tipagem atualizada para incluir matrículas
 interface Student {
   id: string;
   name: string;
   cpf: string | null;
   birth_date: string | null;
+  phone_number: string | null; // Novo campo
   created_at: string;
   enrollments: {
     id: string;
@@ -46,7 +44,6 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
       toast.error("Este aluno não possui uma matrícula ativa para renovar.");
       return;
     }
-    // Pega a matrícula mais recente (assumindo que é a que deve ser renovada)
     const latestEnrollment = student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0];
     setEnrollmentToRenew({ student, enrollment: latestEnrollment });
     setShowRenewDialog(true);
@@ -96,61 +93,27 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
   return (
     <>
-      <Card className="shadow-lg border-border/50 overflow-hidden">
+      <Card>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>CPF</TableHead>
-              <TableHead>Status da Matrícula</TableHead>
-              <TableHead>Vencimento</TableHead>
-              <TableHead>Notificação</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Vencimento da Matrícula</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {students.map((student) => {
-              const hasEnrollment = student.enrollments.length > 0;
-              const latestEnrollment = hasEnrollment 
-                ? student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0]
-                : null;
-              
-              const status = latestEnrollment ? getEnrollmentStatus(latestEnrollment.expiry_date) : null;
-              const expiryDateFormatted = latestEnrollment ? formatDate(latestEnrollment.expiry_date) : "Sem Matrícula";
+              const latestExpiry = student.enrollments.length > 0
+                ? formatDate(student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0].expiry_date)
+                : "Sem Matrícula";
 
               return (
                 <TableRow key={student.id}>
                   <TableCell className="font-medium">{student.name}</TableCell>
-                  <TableCell>{student.cpf || "N/A"}</TableCell>
-                  <TableCell>
-                    {status ? (
-                      <Badge variant={status.variant}>
-                        {status.label}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">Sem Matrícula</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{expiryDateFormatted}</TableCell>
-                  <TableCell>
-                    {status?.shouldNotify ? (
-                      <div className="flex items-center gap-2">
-                        {status.notificationSent ? (
-                          <Badge variant="outline" className="gap-1">
-                            <BellOff className="h-3 w-3" />
-                            Enviada
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="gap-1">
-                            <Bell className="h-3 w-3" />
-                            Pendente
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
+                  <TableCell>{student.phone_number || "N/A"}</TableCell>
+                  <TableCell>{latestExpiry}</TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
                       <CalendarClock className="h-4 w-4 mr-2" />

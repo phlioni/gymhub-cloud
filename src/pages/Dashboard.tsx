@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, DollarSign, AlertTriangle, BarChart2, ShoppingBag, UserPlus, ShoppingCart, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
@@ -52,38 +51,43 @@ const Dashboard = () => {
       tenDaysFromNow.setDate(today.getDate() + 10);
       const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-      const studentsResult = await supabase.from('students').select('*', { count: 'exact', head: true });
-      const expiringResult = await supabase.from('enrollments').select('*', { count: 'exact', head: true }).lte('expiry_date', tenDaysFromNow.toISOString().split('T')[0]).gte('expiry_date', today.toISOString().split('T')[0]);
-      const overdueResult = await supabase.from('enrollments').select('*', { count: 'exact', head: true }).lt('expiry_date', today.toISOString().split('T')[0]);
-      const salesThisMonthResult = await supabase.from('sales').select('total_price').gte('sale_date', firstDayOfCurrentMonth.toISOString());
-      const monthlyRevenueResult = await (supabase as any).rpc('get_monthly_sales_revenue');
-      const topProductsResult = await (supabase as any).rpc('get_top_products_this_month');
-      const recentSalesResult = await supabase.from('sales').select('students(name), products(name), total_price, sale_date').order('sale_date', { ascending: false }).limit(3);
-      const recentEnrollmentsResult = await supabase.from('enrollments').select('students(name), modalities(name), created_at').order('created_at', { ascending: false }).limit(2);
+      const [
+        { count: totalStudents },
+        { count: expiringIn10Days },
+        { count: overduePayments },
+        { data: salesThisMonthData },
+        { data: monthlyRevenueChartData, error: rpcError1 },
+        { data: topProductsData, error: rpcError2 },
+        { data: recentSales },
+        { data: recentEnrollments }
+      ] = await Promise.all([
+        supabase.from('students').select('*', { count: 'exact', head: true }),
+        supabase.from('enrollments').select('*', { count: 'exact', head: true }).lte('expiry_date', tenDaysFromNow.toISOString().split('T')[0]).gte('expiry_date', today.toISOString().split('T')[0]),
+        supabase.from('enrollments').select('*', { count: 'exact', head: true }).lt('expiry_date', today.toISOString().split('T')[0]),
+        supabase.from('sales').select('total_price').gte('sale_date', firstDayOfCurrentMonth.toISOString()),
+        supabase.rpc('get_monthly_sales_revenue'),
+        supabase.rpc('get_top_products_this_month'),
+        supabase.from('sales').select('students(name), products(name), total_price, sale_date').order('sale_date', { ascending: false }).limit(3),
+        supabase.from('enrollments').select('students(name), modalities(name), created_at').order('created_at', { ascending: false }).limit(2)
+      ]);
 
-      const totalStudents = studentsResult.count || 0;
-      const expiringIn10Days = expiringResult.count || 0;
-      const overduePayments = overdueResult.count || 0;
-      const salesThisMonthData = salesThisMonthResult.data || [];
-      const monthlyRevenueChartData = (monthlyRevenueResult.data as MonthlyRevenue[]) || [];
-      const topProductsData = (topProductsResult.data as TopProduct[]) || [];
-      const recentSales = recentSalesResult.data || [];
-      const recentEnrollments = recentEnrollmentsResult.data || [];
+      if (rpcError1) throw rpcError1;
+      if (rpcError2) throw rpcError2;
 
-      const monthlyRevenue = salesThisMonthData.reduce((sum, sale) => sum + sale.total_price, 0);
+      const monthlyRevenue = salesThisMonthData?.reduce((sum, sale) => sum + sale.total_price, 0) || 0;
 
       setStats({
-        totalStudents,
-        expiringIn10Days,
+        totalStudents: totalStudents || 0,
+        expiringIn10Days: expiringIn10Days || 0,
         monthlyRevenue,
-        overduePayments,
+        overduePayments: overduePayments || 0,
       });
 
-      setMonthlyRevenueData(monthlyRevenueChartData);
-      setTopProducts(topProductsData);
+      setMonthlyRevenueData(monthlyRevenueChartData || []);
+      setTopProducts(topProductsData || []);
 
-      const salesActivities = recentSales.map(s => ({ type: 'sale' as const, description: `${s.students?.name || 'Venda anônima'} comprou ${s.products?.name}`, value: `+ R$ ${Number(s.total_price).toFixed(2)}`, created_at: s.sale_date }));
-      const enrollmentActivities = recentEnrollments.map(e => ({ type: 'enrollment' as const, description: `${e.students?.name} se matriculou em ${e.modalities?.name}`, value: ``, created_at: e.created_at }));
+      const salesActivities = recentSales?.map(s => ({ type: 'sale' as const, description: `${s.students?.name || 'Venda anônima'} comprou ${s.products?.name}`, value: `+ R$ ${Number(s.total_price).toFixed(2)}`, created_at: s.sale_date })) || [];
+      const enrollmentActivities = recentEnrollments?.map(e => ({ type: 'enrollment' as const, description: `${e.students?.name} se matriculou em ${e.modalities?.name}`, value: ``, created_at: e.created_at })) || [];
       const combined = [...salesActivities, ...enrollmentActivities].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
       setRecentActivities(combined);
 
@@ -100,20 +104,16 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
-                  Dashboard
-                </h1>
-                <p className="text-base text-muted-foreground">
-                  A visão geral e em tempo real da sua academia
-                </p>
-              </div>
-            </div>
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-muted-foreground">
+              A visão geral e em tempo real da sua academia.
+            </p>
+          </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento do Mês (Produtos)</CardTitle><DollarSign className="h-5 w-5 text-green-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(stats.monthlyRevenue)}</div>}<p className="text-xs text-muted-foreground">Receita total de vendas de produtos.</p></CardContent></Card>
@@ -194,8 +194,7 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
-    </div>
-    <ExpiringEnrollmentsDialog open={showExpiringDialog} onOpenChange={setShowExpiringDialog} />
+      <ExpiringEnrollmentsDialog open={showExpiringDialog} onOpenChange={setShowExpiringDialog} />
     </>
   );
 };

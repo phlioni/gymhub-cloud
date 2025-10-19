@@ -60,7 +60,6 @@ const Modalities = () => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
-      <Sidebar />
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
