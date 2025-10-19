@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dumbbell } from "lucide-react";
 import { toast } from "sonner";
+import gymhubLogo from "@/assets/gymhub-logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -68,18 +68,16 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-2xl">
-              <Dumbbell className="h-12 w-12 text-primary" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
+      <Card className="w-full max-w-md shadow-2xl border-primary/20">
+        <CardHeader className="space-y-4 text-center pb-8">
+          <div className="flex justify-center">
+            <img src={gymhubLogo} alt="GymHub Logo" className="w-24 h-24" />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             GymHub
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             Acesse sua conta para continuar
           </CardDescription>
         </CardHeader>

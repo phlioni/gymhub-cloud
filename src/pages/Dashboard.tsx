@@ -51,40 +51,38 @@ const Dashboard = () => {
       tenDaysFromNow.setDate(today.getDate() + 10);
       const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-      const [
-        { count: totalStudents },
-        { count: expiringIn10Days },
-        { count: overduePayments },
-        { data: salesThisMonthData },
-        { data: monthlyRevenueChartData },
-        { data: topProductsData },
-        { data: recentSales },
-        { data: recentEnrollments }
-      ] = await Promise.all([
-        supabase.from('students').select('*', { count: 'exact', head: true }),
-        supabase.from('enrollments').select('*', { count: 'exact', head: true }).lte('expiry_date', tenDaysFromNow.toISOString().split('T')[0]).gte('expiry_date', today.toISOString().split('T')[0]),
-        supabase.from('enrollments').select('*', { count: 'exact', head: true }).lt('expiry_date', today.toISOString().split('T')[0]),
-        supabase.from('sales').select('total_price').gte('sale_date', firstDayOfCurrentMonth.toISOString()),
-        supabase.rpc('get_monthly_sales_revenue'),
-        supabase.rpc('get_top_products_this_month'),
-        supabase.from('sales').select('students(name), products(name), total_price, sale_date').order('sale_date', { ascending: false }).limit(3),
-        supabase.from('enrollments').select('students(name), modalities(name), created_at').order('created_at', { ascending: false }).limit(2)
-      ]);
+      const studentsResult = await supabase.from('students').select('*', { count: 'exact', head: true });
+      const expiringResult = await supabase.from('enrollments').select('*', { count: 'exact', head: true }).lte('expiry_date', tenDaysFromNow.toISOString().split('T')[0]).gte('expiry_date', today.toISOString().split('T')[0]);
+      const overdueResult = await supabase.from('enrollments').select('*', { count: 'exact', head: true }).lt('expiry_date', today.toISOString().split('T')[0]);
+      const salesThisMonthResult = await supabase.from('sales').select('total_price').gte('sale_date', firstDayOfCurrentMonth.toISOString());
+      const monthlyRevenueResult = await (supabase as any).rpc('get_monthly_sales_revenue');
+      const topProductsResult = await (supabase as any).rpc('get_top_products_this_month');
+      const recentSalesResult = await supabase.from('sales').select('students(name), products(name), total_price, sale_date').order('sale_date', { ascending: false }).limit(3);
+      const recentEnrollmentsResult = await supabase.from('enrollments').select('students(name), modalities(name), created_at').order('created_at', { ascending: false }).limit(2);
 
-      const monthlyRevenue = salesThisMonthData?.reduce((sum, sale) => sum + sale.total_price, 0) || 0;
+      const totalStudents = studentsResult.count || 0;
+      const expiringIn10Days = expiringResult.count || 0;
+      const overduePayments = overdueResult.count || 0;
+      const salesThisMonthData = salesThisMonthResult.data || [];
+      const monthlyRevenueChartData = (monthlyRevenueResult.data as MonthlyRevenue[]) || [];
+      const topProductsData = (topProductsResult.data as TopProduct[]) || [];
+      const recentSales = recentSalesResult.data || [];
+      const recentEnrollments = recentEnrollmentsResult.data || [];
+
+      const monthlyRevenue = salesThisMonthData.reduce((sum, sale) => sum + sale.total_price, 0);
 
       setStats({
-        totalStudents: totalStudents || 0,
-        expiringIn10Days: expiringIn10Days || 0,
+        totalStudents,
+        expiringIn10Days,
         monthlyRevenue,
-        overduePayments: overduePayments || 0,
+        overduePayments,
       });
 
-      setMonthlyRevenueData(monthlyRevenueChartData || []);
-      setTopProducts(topProductsData || []);
+      setMonthlyRevenueData(monthlyRevenueChartData);
+      setTopProducts(topProductsData);
 
-      const salesActivities = recentSales?.map(s => ({ type: 'sale' as const, description: `${s.students?.name || 'Venda anônima'} comprou ${s.products?.name}`, value: `+ R$ ${Number(s.total_price).toFixed(2)}`, created_at: s.sale_date })) || [];
-      const enrollmentActivities = recentEnrollments?.map(e => ({ type: 'enrollment' as const, description: `${e.students?.name} se matriculou em ${e.modalities?.name}`, value: ``, created_at: e.created_at })) || [];
+      const salesActivities = recentSales.map(s => ({ type: 'sale' as const, description: `${s.students?.name || 'Venda anônima'} comprou ${s.products?.name}`, value: `+ R$ ${Number(s.total_price).toFixed(2)}`, created_at: s.sale_date }));
+      const enrollmentActivities = recentEnrollments.map(e => ({ type: 'enrollment' as const, description: `${e.students?.name} se matriculou em ${e.modalities?.name}`, value: ``, created_at: e.created_at }));
       const combined = [...salesActivities, ...enrollmentActivities].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
       setRecentActivities(combined);
 

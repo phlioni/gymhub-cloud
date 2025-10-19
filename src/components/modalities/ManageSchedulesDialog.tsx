@@ -78,7 +78,10 @@ export const ManageSchedulesDialog = ({ modality, open, onOpenChange }: ManageSc
         try {
             const { error } = await supabase.from('schedules').insert({
                 modality_id: modality.id,
-                ...newSchedule,
+                day_of_week: parseInt(newSchedule.day_of_week),
+                start_time: newSchedule.start_time,
+                end_time: newSchedule.end_time,
+                max_students: parseInt(newSchedule.max_students),
             });
             if (error) throw error;
             toast.success("Horário adicionado com sucesso!");
