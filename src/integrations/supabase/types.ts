@@ -16,7 +16,7 @@ export type Database = {
           id: string
           modality_id: string
           student_id: string
-          price: number | null // MODIFICAÇÃO AQUI
+          price: number | null
         }
         Insert: {
           created_at?: string
@@ -24,7 +24,7 @@ export type Database = {
           id?: string
           modality_id: string
           student_id: string
-          price?: number | null // MODIFICAÇÃO AQUI
+          price?: number | null
         }
         Update: {
           created_at?: string
@@ -32,7 +32,7 @@ export type Database = {
           id?: string
           modality_id?: string
           student_id?: string
-          price?: number | null // MODIFICAÇÃO AQUI
+          price?: number | null
         }
         Relationships: [
           {
@@ -332,6 +332,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_enrollment_revenue_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_monthly_sales_revenue: {
         Args: Record<PropertyKey, never>
         Returns: {

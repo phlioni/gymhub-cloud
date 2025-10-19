@@ -93,7 +93,7 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Modalidades</TableHead>
+                <TableHead>Modalidades e Preços</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Automação</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -107,7 +107,6 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
                 const status = getEnrollmentStatus(latestEnrollment?.expiry_date || null);
                 const isAutomationActive = status.daysRemaining !== null && status.daysRemaining <= 10 && status.daysRemaining >= 1;
-                const modalityNames = student.enrollments.map(e => e.modalities?.name).join(', ');
 
                 return (
                   <TableRow key={student.id}>
@@ -115,7 +114,19 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                       <div>{student.name}</div>
                       <div className="text-xs text-muted-foreground">{student.phone_number || "Sem telefone"}</div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{modalityNames || "N/A"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {student.enrollments.length > 0 ? (
+                          student.enrollments.map(e => (
+                            <Badge key={e.id} variant="secondary" className="font-normal whitespace-nowrap">
+                              {e.modalities?.name || 'N/A'} (R$ {Number(e.price || 0).toFixed(2).replace('.', ',')})
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">N/A</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={status.variant}>{status.text}</Badge>
                     </TableCell>

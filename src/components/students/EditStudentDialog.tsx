@@ -29,8 +29,6 @@ import {
 } from "@/components/ui/select";
 import { Trash2, PlusCircle } from "lucide-react";
 
-// (As interfaces Student, EditStudentDialogProps e Modality permanecem as mesmas)
-
 interface Student {
     id: string;
     name: string;
@@ -60,12 +58,12 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
     const [studentEnrollments, setStudentEnrollments] = useState<any[]>([]);
     const [formData, setFormData] = useState({ name: "", cpf: "", birthDate: "", phoneNumber: "" });
     const [newEnrollment, setNewEnrollment] = useState({ modalityId: "", price: "", expiryDate: "" });
-
-    // Estado para o diálogo de confirmação
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [enrollmentToDelete, setEnrollmentToDelete] = useState<string | null>(null);
 
     useEffect(() => {
+        // Popula os dados apenas quando o modal é aberto para um aluno específico.
+        // A dependência `student?.id` evita que o estado seja resetado por re-renderizações do componente pai.
         if (open && student) {
             setFormData({
                 name: student.name || "",
@@ -76,14 +74,14 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
             setStudentEnrollments(student.enrollments || []);
             loadModalities();
         }
-    }, [open, student]);
+    }, [open, student?.id]);
 
     const loadModalities = async () => {
         const { data } = await supabase.from('modalities').select('id, name, price').order('name');
         setAllModalities(data as Modality[] || []);
     };
 
-    const handleUpdateStudent = async () => {
+    const handleUpdateAndClose = async () => {
         if (!student) return;
         setLoading(true);
         try {
@@ -92,8 +90,9 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                 .update({ name: formData.name, cpf: formData.cpf || null, birth_date: formData.birthDate || null, phone_number: formData.phoneNumber || null })
                 .eq('id', student.id);
             if (error) throw error;
-            toast.success("Dados do aluno atualizados");
+            toast.success("Dados do aluno atualizados com sucesso!");
             onSuccess();
+            onOpenChange(false); // Fecha o modal após salvar
         } catch (error: any) {
             toast.error(error.message || "Falha ao atualizar dados do aluno");
         } finally {
@@ -119,10 +118,11 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
 
             if (error) throw error;
 
+            // Atualização instantânea do estado local para refletir na UI
             setStudentEnrollments(prev => [...prev, data]);
             setNewEnrollment({ modalityId: "", price: "", expiryDate: "" });
             toast.success("Modalidade adicionada ao aluno.");
-            onSuccess();
+            onSuccess(); // Atualiza a lista principal em segundo plano
         } catch (error: any) {
             toast.error(error.message || "Falha ao adicionar modalidade.");
         } finally {
@@ -138,9 +138,10 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
             const { error } = await supabase.from('enrollments').delete().eq('id', enrollmentToDelete);
             if (error) throw error;
 
+            // Atualização instantânea do estado local para refletir na UI
             setStudentEnrollments(prev => prev.filter(e => e.id !== enrollmentToDelete));
             toast.success("Matrícula removida com sucesso.");
-            onSuccess();
+            onSuccess(); // Atualiza a lista principal em segundo plano
         } catch (error: any) {
             toast.error(error.message || "Falha ao remover matrícula.");
         } finally {
@@ -150,6 +151,7 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
         }
     }
 
+    // Filtra as modalidades para mostrar apenas as que o aluno ainda não tem
     const availableModalities = allModalities.filter(
         (modality) => !studentEnrollments.some((enrollment) => enrollment.modality_id === modality.id)
     );
@@ -179,7 +181,7 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                                 <Label htmlFor="birthDate">Data de Nascimento</Label>
                                 <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
                             </div>
-                            <Button onClick={handleUpdateStudent} disabled={loading}>{loading ? "Salvando..." : "Salvar Dados Pessoais"}</Button>
+                            <Button onClick={handleUpdateAndClose} disabled={loading}>{loading ? "Salvando..." : "Salvar e Fechar"}</Button>
                         </div>
 
                         {/* Coluna de Matrículas */}
