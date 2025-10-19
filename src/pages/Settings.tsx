@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,103 +127,148 @@ const Settings = () => {
   };
 
   return (
-    <main className="flex-1 p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Configurações
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie as informações da sua organização
-          </p>
-        </div>
+    <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
+      <Sidebar />
+      <main className="flex-1 p-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
+              Configurações
+            </h1>
+            <p className="text-base text-muted-foreground">
+              Gerencie as informações da sua organização
+            </p>
+          </div>
 
-        {loading ? (
-          <Card>
-            <CardContent className="p-12">
-              <div className="space-y-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="h-12 bg-muted rounded" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalhes da Organização</CardTitle>
-              <CardDescription>
-                Atualize as informações da sua academia ou CT
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Logo</Label>
-                  <div className="flex items-center gap-4">
-                    {formData.logoUrl ? (
-                      <img
-                        src={formData.logoUrl}
-                        alt="Logo da Organização"
-                        className="h-20 w-20 object-cover rounded-lg border"
+          {loading ? (
+            <Card className="shadow-lg border-border/50">
+              <CardContent className="p-12">
+                <div className="space-y-5">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-14 bg-muted/50 rounded-lg" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="shadow-lg border-border/50">
+              <CardHeader className="pb-6">
+                <CardTitle className="text-2xl">Detalhes da Organização</CardTitle>
+                <CardDescription className="text-base">
+                  Atualize as informações da sua academia ou CT
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-7">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Logo</Label>
+                    <div className="flex items-center gap-5">
+                      {formData.logoUrl ? (
+                        <img
+                          src={formData.logoUrl}
+                          alt="Logo da Organização"
+                          className="h-24 w-24 object-cover rounded-xl border-2 border-border/50 shadow-md"
+                        />
+                      ) : (
+                        <div className="h-24 w-24 bg-muted/50 rounded-xl flex items-center justify-center border-2 border-dashed border-border">
+                          <span className="text-xs text-muted-foreground font-medium">Sem Logo</span>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleLogoUpload}
+                        accept="image/png, image/jpeg"
+                        style={{ display: 'none' }}
+                        disabled={uploading}
                       />
-                    ) : (
-                      <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">Sem Logo</span>
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleLogoUpload}
-                      accept="image/png, image/jpeg"
-                      style={{ display: 'none' }}
-                      disabled={uploading}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="h-11 shadow-sm hover:shadow transition-all"
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {uploading ? "Enviando..." : "Enviar Logo"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-7 md:grid-cols-2">
+                    <div className="space-y-3 md:col-span-2">
+                      <Label htmlFor="name" className="text-sm font-medium">Nome *</Label>
+                      <Input 
+                        id="name" 
+                        value={formData.name} 
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                        required 
+                        disabled={saving}
+                        className="h-11 shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-3 md:col-span-2">
+                      <Label htmlFor="address" className="text-sm font-medium">Endereço</Label>
+                      <Textarea 
+                        id="address" 
+                        value={formData.address} 
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })} 
+                        disabled={saving} 
+                        rows={3}
+                        className="shadow-sm resize-none"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label htmlFor="ownerName" className="text-sm font-medium">Nome do Responsável</Label>
+                      <Input 
+                        id="ownerName" 
+                        value={formData.ownerName} 
+                        onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} 
+                        disabled={saving}
+                        className="h-11 shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label htmlFor="phoneNumber" className="text-sm font-medium">Telefone</Label>
+                      <Input 
+                        id="phoneNumber" 
+                        type="tel" 
+                        value={formData.phoneNumber} 
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} 
+                        disabled={saving}
+                        className="h-11 shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-3 md:col-span-2">
+                      <Label htmlFor="businessHours" className="text-sm font-medium">Horário de Funcionamento</Label>
+                      <Textarea 
+                        id="businessHours" 
+                        value={formData.businessHours} 
+                        onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} 
+                        placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" 
+                        disabled={saving} 
+                        rows={3}
+                        className="shadow-sm resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-6 border-t border-border/50">
+                    <Button 
+                      type="submit" 
+                      disabled={saving || uploading}
+                      className="h-11 px-8 shadow-md hover:shadow-lg transition-all"
                     >
-                      <Upload className="mr-2 h-4 w-4" />
-                      {uploading ? "Enviando..." : "Enviar Logo"}
+                      {saving ? "Salvando..." : "Salvar Alterações"}
                     </Button>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome *</Label>
-                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={saving} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Textarea id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} disabled={saving} rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ownerName">Nome do Responsável</Label>
-                  <Input id="ownerName" value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} disabled={saving} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Telefone</Label>
-                  <Input id="phoneNumber" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={saving} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="businessHours">Horário de Funcionamento</Label>
-                  <Textarea id="businessHours" value={formData.businessHours} onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" disabled={saving} rows={3} />
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button type="submit" disabled={saving || uploading}>
-                    {saving ? "Salvando..." : "Salvar Alterações"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </main>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </main>
+    </div>
   );
 };
 

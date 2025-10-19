@@ -59,21 +59,22 @@ const Modalities = () => {
   };
 
   return (
-    <div className="flex min-h-screen">
-      <main className="flex-1 p-8 bg-gradient-to-br from-background via-muted/20 to-background">
-        <div className="max-w-7xl mx-auto space-y-6">
+    <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
+      <Sidebar />
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <div className="space-y-2">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
                 Modalidades
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Gerencie os tipos de aulas e horários
               </p>
             </div>
-            <Button onClick={() => setShowAddDialog(true)} size="lg">
+            <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all">
               <Plus className="h-5 w-5 mr-2" />
-              Adicionar Modalidade
+              <span className="font-medium">Adicionar Modalidade</span>
             </Button>
           </div>
 

@@ -76,31 +76,32 @@ const Students = () => {
   }, [students, searchTerm]);
 
   return (
-    <div className="flex min-h-screen">
-      <main className="flex-1 p-8 bg-gradient-to-br from-background via-muted/20 to-background">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+    <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
+      <Sidebar />
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="space-y-2">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
                 Alunos
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Gerencie os membros da sua academia
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative w-full md:w-64">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full md:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nome..."
-                  className="pl-9"
+                  className="pl-10 h-11 bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50 shadow-sm transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Button onClick={() => setShowAddDialog(true)} size="lg">
+              <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all">
                 <Plus className="h-5 w-5 md:mr-2" />
-                <span className="hidden md:inline">Adicionar Aluno</span>
+                <span className="hidden md:inline font-medium">Adicionar Aluno</span>
               </Button>
             </div>
           </div>

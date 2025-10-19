@@ -2,8 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Design System - Modern UI/UX for GymHub
+All colors MUST be HSL for maximum flexibility
+Typography uses Inter font for modern look
 */
 
 @layer base {
@@ -17,57 +18,61 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    /* Vibrant purple primary */
-    --primary: 262 83% 58%;
+    /* Vibrant purple primary - mais saturado */
+    --primary: 262 90% 55%;
     --primary-foreground: 0 0% 100%;
 
-    /* Subtle gray secondary */
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    /* Subtle gray secondary com mais contraste */
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
 
-    /* Energetic orange accent */
-    --accent: 24 95% 53%;
+    /* Energetic orange accent - mais vibrante */
+    --accent: 24 100% 50%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262 83% 58%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 262 90% 55%;
 
     --radius: 0.75rem;
 
-    /* Chart colors */
-    --chart-1: 262 83% 58%;
-    --chart-2: 24 95% 53%;
+    /* Chart colors - mais vibrantes */
+    --chart-1: 262 90% 55%;
+    --chart-2: 24 100% 50%;
     --chart-3: 173 80% 40%;
     --chart-4: 43 96% 56%;
     --chart-5: 27 87% 67%;
 
-    /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(282 83% 58%));
-    --gradient-accent: linear-gradient(135deg, hsl(24 95% 53%), hsl(14 95% 53%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(240 4.8% 97%));
+    /* Modern gradients - mais suaves e elegantes */
+    --gradient-primary: linear-gradient(135deg, hsl(262 90% 55%) 0%, hsl(282 85% 60%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(24 100% 50%) 0%, hsl(34 100% 55%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(240 5% 98%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(262 90% 97%) 0%, hsl(0 0% 100%) 50%, hsl(24 100% 97%) 100%);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --shadow-glow: 0 0 40px hsl(262 83% 58% / 0.3);
+    /* Modern shadows - mais suaves */
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.1), 0 8px 10px -6px hsl(0 0% 0% / 0.1);
+    --shadow-glow: 0 0 50px hsl(262 90% 55% / 0.25);
+    --shadow-glow-accent: 0 0 40px hsl(24 100% 50% / 0.2);
 
-    /* Sidebar */
-    --sidebar-background: 262 90% 97%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 262 83% 58%;
+    /* Sidebar - design moderno */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 6% 25%;
+    --sidebar-primary: 262 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 262 75% 95%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 240 5.9% 90%;
-    --sidebar-ring: 262 83% 58%;
+    --sidebar-accent: 262 90% 96%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-border: 240 6% 92%;
+    --sidebar-ring: 262 90% 55%;
   }
 
   .dark {
@@ -80,39 +85,39 @@ All colors MUST be HSL.
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 262 83% 58%;
+    --primary: 262 90% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 240 4% 16%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 24 95% 53%;
+    --accent: 24 100% 50%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 262 83% 58%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 262 90% 55%;
 
-    --chart-1: 262 83% 58%;
-    --chart-2: 24 95% 53%;
+    --chart-1: 262 90% 55%;
+    --chart-2: 24 100% 50%;
     --chart-3: 173 80% 40%;
     --chart-4: 43 96% 56%;
     --chart-5: 27 87% 67%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 262 83% 58%;
+    --sidebar-background: 240 10% 8%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 262 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 262 83% 58%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 262 90% 55%;
   }
 }
 
@@ -123,5 +128,15 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+    letter-spacing: -0.02em;
   }
 }

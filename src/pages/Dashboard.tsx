@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, DollarSign, AlertTriangle, BarChart2, ShoppingBag, UserPlus, ShoppingCart, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
@@ -99,16 +100,20 @@ const Dashboard = () => {
 
   return (
     <>
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Dashboard
-            </h1>
-            <p className="text-muted-foreground">
-              A visão geral e em tempo real da sua academia.
-            </p>
-          </div>
+      <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
+                  Dashboard
+                </h1>
+                <p className="text-base text-muted-foreground">
+                  A visão geral e em tempo real da sua academia
+                </p>
+              </div>
+            </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento do Mês (Produtos)</CardTitle><DollarSign className="h-5 w-5 text-green-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(stats.monthlyRevenue)}</div>}<p className="text-xs text-muted-foreground">Receita total de vendas de produtos.</p></CardContent></Card>
@@ -189,7 +194,8 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
-      <ExpiringEnrollmentsDialog open={showExpiringDialog} onOpenChange={setShowExpiringDialog} />
+    </div>
+    <ExpiringEnrollmentsDialog open={showExpiringDialog} onOpenChange={setShowExpiringDialog} />
     </>
   );
 };

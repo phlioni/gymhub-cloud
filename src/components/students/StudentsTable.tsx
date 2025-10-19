@@ -96,7 +96,7 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
   return (
     <>
-      <Card>
+      <Card className="shadow-lg border-border/50 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

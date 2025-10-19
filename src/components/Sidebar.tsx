@@ -40,23 +40,26 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
   };
 
   return (
-    <div className="flex flex-col w-64 bg-sidebar border-r border-sidebar-border">
-      <div className="p-6 border-b border-sidebar-border">
+    <div className="flex flex-col w-72 bg-sidebar border-r border-sidebar-border shadow-sm">
+      <div className="p-6 border-b border-sidebar-border bg-gradient-to-br from-primary/5 to-transparent">
         <div className="flex items-center gap-3">
           {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+            <img src={logoUrl} alt="Logo" className="h-12 w-12 rounded-xl object-cover shadow-md ring-2 ring-primary/10" />
           ) : (
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Dumbbell className="h-6 w-6 text-primary" />
+            <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md">
+              <Dumbbell className="h-7 w-7 text-white" />
             </div>
           )}
-          <span className="text-lg font-bold text-foreground">
-            {organizationName || "GymHub"}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold text-foreground tracking-tight">
+              {organizationName || "GymHub"}
+            </span>
+            <span className="text-xs text-muted-foreground">Gestão Completa</span>
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname.startsWith(item.href);
@@ -65,27 +68,33 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
               key={item.name}
               to={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all",
+                "group flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  ? "bg-gradient-to-r from-primary to-primary/90 text-white shadow-md shadow-primary/25 scale-[1.02]"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:scale-[1.01] hover:shadow-sm"
               )}
             >
-              <Icon className="h-5 w-5" />
-              {item.name}
+              <Icon className={cn(
+                "h-5 w-5 transition-transform duration-200",
+                isActive ? "scale-110" : "group-hover:scale-105"
+              )} />
+              <span className="font-medium">{item.name}</span>
+              {isActive && (
+                <div className="ml-auto h-2 w-2 rounded-full bg-white/90 shadow-sm animate-pulse" />
+              )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border bg-gradient-to-t from-sidebar-accent/30 to-transparent">
         <Button
           variant="ghost"
-          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
+          className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 rounded-xl"
           onClick={handleSignOut}
         >
           <LogOut className="h-5 w-5 mr-3" />
-          Sair
+          <span className="font-medium">Sair</span>
         </Button>
       </div>
     </div>
