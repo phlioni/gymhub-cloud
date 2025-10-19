@@ -73,7 +73,7 @@ const Modalities = () => {
             </div>
             <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all">
               <Plus className="h-5 w-5 mr-2" />
-              <span className="font-medium">Adicionar Modalidade</span>
+              <span className="font-medium">Adicionar Modalidad</span>
             </Button>
           </div>
 
