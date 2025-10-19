@@ -49,7 +49,7 @@ const SuperAdmin = () => {
       if (error) throw error;
       setOrganizations(data || []);
     } catch (error: any) {
-      toast.error("Failed to load organizations");
+      toast.error("Falha ao carregar as organizações");
       console.error(error);
     } finally {
       setLoading(false);
@@ -59,7 +59,7 @@ const SuperAdmin = () => {
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast.error("Failed to sign out");
+      toast.error("Falha ao sair");
     } else {
       navigate('/');
     }
@@ -80,7 +80,7 @@ const SuperAdmin = () => {
           </div>
           <Button variant="ghost" onClick={handleSignOut}>
             <LogOut className="h-5 w-5 mr-2" />
-            Sign Out
+            Sair
           </Button>
         </div>
       </header>
@@ -88,10 +88,10 @@ const SuperAdmin = () => {
       <main className="max-w-7xl mx-auto p-8 space-y-8">
         <div>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Super Admin Dashboard
+            Painel Super Admin
           </h1>
           <p className="text-muted-foreground">
-            Manage all organizations and client accounts
+            Gerencie todas as organizações e contas de clientes
           </p>
         </div>
 
@@ -99,27 +99,27 @@ const SuperAdmin = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-50" />
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription>Total Organizations</CardDescription>
+              <CardDescription>Total de Organizações</CardDescription>
               <Building2 className="h-5 w-5 text-muted-foreground" />
             </div>
             <CardTitle className="text-3xl font-bold">{organizations.length}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground">Registered gym clients</p>
+            <p className="text-xs text-muted-foreground">Clientes de academias registrados</p>
           </CardContent>
         </Card>
 
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Organizations</h2>
+          <h2 className="text-2xl font-bold">Organizações</h2>
           <Button onClick={() => setShowCreateDialog(true)} size="lg">
             <Plus className="h-5 w-5 mr-2" />
-            Create Organization
+            Criar Organização
           </Button>
         </div>
 
-        <OrganizationsTable 
-          organizations={organizations} 
-          loading={loading} 
+        <OrganizationsTable
+          organizations={organizations}
+          loading={loading}
           onRefresh={loadOrganizations}
         />
 

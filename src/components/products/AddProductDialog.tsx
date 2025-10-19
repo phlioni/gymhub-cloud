@@ -25,7 +25,7 @@ export const AddProductDialog = ({ open, onOpenChange, organizationId, onSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organizationId) {
-      toast.error("Organization not found");
+      toast.error("Organização não encontrada");
       return;
     }
 
@@ -43,12 +43,12 @@ export const AddProductDialog = ({ open, onOpenChange, organizationId, onSuccess
 
       if (error) throw error;
 
-      toast.success("Product added successfully");
+      toast.success("Produto adicionado com sucesso");
       onSuccess();
       onOpenChange(false);
       setFormData({ name: "", brand: "", price: "", quantity: "" });
     } catch (error: any) {
-      toast.error(error.message || "Failed to add product");
+      toast.error(error.message || "Falha ao adicionar produto");
       console.error(error);
     } finally {
       setLoading(false);
@@ -59,62 +59,34 @@ export const AddProductDialog = ({ open, onOpenChange, organizationId, onSuccess
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Product</DialogTitle>
+          <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
-            Add a product to your inventory.
+            Adicione um produto ao seu inventário.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              disabled={loading}
-            />
+            <Label htmlFor="name">Nome *</Label>
+            <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="brand">Brand</Label>
-            <Input
-              id="brand"
-              value={formData.brand}
-              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-              disabled={loading}
-            />
+            <Label htmlFor="brand">Marca</Label>
+            <Input id="brand" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} disabled={loading} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="price">Price (R$) *</Label>
-            <Input
-              id="price"
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              required
-              disabled={loading}
-            />
+            <Label htmlFor="price">Preço (R$) *</Label>
+            <Input id="price" type="number" step="0.01" min="0" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required disabled={loading} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quantity">Initial Quantity *</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min="0"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-              required
-              disabled={loading}
-            />
+            <Label htmlFor="quantity">Quantidade Inicial *</Label>
+            <Input id="quantity" type="number" min="0" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} required disabled={loading} />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Product"}
+              {loading ? "Adicionando..." : "Adicionar Produto"}
             </Button>
           </div>
         </form>

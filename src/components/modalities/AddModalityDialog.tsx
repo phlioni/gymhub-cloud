@@ -24,7 +24,7 @@ export const AddModalityDialog = ({ open, onOpenChange, organizationId, onSucces
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organizationId) {
-      toast.error("Organization not found");
+      toast.error("Organização não encontrada");
       return;
     }
 
@@ -40,12 +40,12 @@ export const AddModalityDialog = ({ open, onOpenChange, organizationId, onSucces
 
       if (error) throw error;
 
-      toast.success("Modality added successfully");
+      toast.success("Modalidade adicionada com sucesso");
       onSuccess();
       onOpenChange(false);
       setFormData({ name: "", description: "" });
     } catch (error: any) {
-      toast.error(error.message || "Failed to add modality");
+      toast.error(error.message || "Falha ao adicionar modalidade");
       console.error(error);
     } finally {
       setLoading(false);
@@ -56,40 +56,40 @@ export const AddModalityDialog = ({ open, onOpenChange, organizationId, onSucces
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Modality</DialogTitle>
+          <DialogTitle>Adicionar Nova Modalidade</DialogTitle>
           <DialogDescription>
-            Create a new class type for your gym.
+            Crie um novo tipo de aula para sua academia.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name">Nome *</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Yoga, CrossFit"
+              placeholder="Ex: Yoga, CrossFit"
               required
               disabled={loading}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Descrição</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Brief description of this class type"
+              placeholder="Breve descrição sobre este tipo de aula"
               disabled={loading}
               rows={4}
             />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Modality"}
+              {loading ? "Adicionando..." : "Adicionar Modalidade"}
             </Button>
           </div>
         </form>

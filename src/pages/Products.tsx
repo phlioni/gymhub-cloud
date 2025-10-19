@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Search } from "lucide-react";
 import { ProductsTable } from "@/components/products/ProductsTable";
 import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { toast } from "sonner";
@@ -12,8 +13,9 @@ const Products = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -42,6 +44,7 @@ const Products = () => {
   };
 
   const loadProducts = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('products')
@@ -51,36 +54,54 @@ const Products = () => {
       if (error) throw error;
       setProducts(data || []);
     } catch (error: any) {
-      toast.error("Failed to load products");
-      console.error(error);
+      toast.error("Falha ao carregar os produtos");
     } finally {
       setLoading(false);
     }
   };
 
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) {
+      return products;
+    }
+    return products.filter(product =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [products, searchTerm]);
+
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
       <main className="flex-1 p-8 bg-gradient-to-br from-background via-muted/20 to-background">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Products
+                Produtos
               </h1>
               <p className="text-muted-foreground">
-                Manage inventory and sales
+                Gerencie o inventário e as vendas
               </p>
             </div>
-            <Button onClick={() => setShowAddDialog(true)} size="lg">
-              <Plus className="h-5 w-5 mr-2" />
-              Add Product
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome..."
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button onClick={() => setShowAddDialog(true)} size="lg">
+                <Plus className="h-5 w-5 md:mr-2" />
+                <span className="hidden md:inline">Adicionar Produto</span>
+              </Button>
+            </div>
           </div>
 
-          <ProductsTable 
-            products={products} 
-            loading={loading} 
+          <ProductsTable
+            products={filteredProducts}
+            loading={loading}
             onRefresh={loadProducts}
             organizationId={organizationId}
           />

@@ -42,13 +42,13 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organizationId) {
-      toast.error("Organization not found");
+      toast.error("Organização não encontrada");
       return;
     }
 
     setLoading(true);
     try {
-      // Create student
+      // Criar aluno
       const { data: student, error: studentError } = await supabase
         .from('students')
         .insert({
@@ -62,7 +62,7 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
 
       if (studentError) throw studentError;
 
-      // Create enrollment if modality selected
+      // Criar matrícula se a modalidade for selecionada
       if (formData.modalityId && formData.expiryDate) {
         const { error: enrollmentError } = await supabase
           .from('enrollments')
@@ -75,12 +75,12 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
         if (enrollmentError) throw enrollmentError;
       }
 
-      toast.success("Student added successfully");
+      toast.success("Aluno adicionado com sucesso");
       onSuccess();
       onOpenChange(false);
       setFormData({ name: "", cpf: "", birthDate: "", modalityId: "", expiryDate: "" });
     } catch (error: any) {
-      toast.error(error.message || "Failed to add student");
+      toast.error(error.message || "Falha ao adicionar aluno");
       console.error(error);
     } finally {
       setLoading(false);
@@ -91,14 +91,14 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Student</DialogTitle>
+          <DialogTitle>Adicionar Novo Aluno</DialogTitle>
           <DialogDescription>
-            Enter the student's information and initial enrollment details.
+            Insira as informações do aluno e os detalhes da matrícula inicial.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name">Nome *</Label>
             <Input
               id="name"
               value={formData.name}
@@ -118,7 +118,7 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="birthDate">Birth Date</Label>
+            <Label htmlFor="birthDate">Data de Nascimento</Label>
             <Input
               id="birthDate"
               type="date"
@@ -128,14 +128,14 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="modality">Initial Modality</Label>
+            <Label htmlFor="modality">Modalidade Inicial</Label>
             <Select
               value={formData.modalityId}
               onValueChange={(value) => setFormData({ ...formData, modalityId: value })}
               disabled={loading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a modality" />
+                <SelectValue placeholder="Selecione uma modalidade" />
               </SelectTrigger>
               <SelectContent>
                 {modalities.map((modality) => (
@@ -147,7 +147,7 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="expiryDate">Enrollment Expiry Date</Label>
+            <Label htmlFor="expiryDate">Data de Vencimento da Matrícula</Label>
             <Input
               id="expiryDate"
               type="date"
@@ -158,10 +158,10 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Student"}
+              {loading ? "Adicionando..." : "Adicionar Aluno"}
             </Button>
           </div>
         </form>

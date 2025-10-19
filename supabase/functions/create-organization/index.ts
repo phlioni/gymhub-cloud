@@ -45,11 +45,30 @@ Deno.serve(async (req) => {
       throw userError
     }
 
+    // After creating the user, insert into public.profiles
+    if (userData.user) {
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: userData.user.id,
+          organization_id: orgData.id,
+          full_name: adminFullName,
+          role: 'admin'
+        });
+
+      if (profileError) {
+        // More complex rollback would be needed here in a real-world scenario
+        // For now, we'll just throw the error
+        throw profileError;
+      }
+    }
+
+
     return new Response(
       JSON.stringify({ success: true, organization: orgData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }

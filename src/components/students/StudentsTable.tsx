@@ -1,16 +1,24 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, CalendarClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { EditStudentDialog } from "./EditStudentDialog";
+import { RenewEnrollmentDialog } from "./RenewEnrollmentDialog"; // Importe o novo modal
 
+// Tipagem atualizada para incluir matrículas
 interface Student {
   id: string;
   name: string;
   cpf: string | null;
   birth_date: string | null;
   created_at: string;
+  enrollments: {
+    id: string;
+    expiry_date: string;
+  }[];
 }
 
 interface StudentsTableProps {
@@ -20,27 +28,48 @@ interface StudentsTableProps {
 }
 
 export const StudentsTable = ({ students, loading, onRefresh }: StudentsTableProps) => {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  const [showRenewDialog, setShowRenewDialog] = useState(false);
+  const [enrollmentToRenew, setEnrollmentToRenew] = useState<{ student: Student; enrollment: Student['enrollments'][0] } | null>(null);
+
+  const handleEditClick = (student: Student) => {
+    setSelectedStudent(student);
+    setShowEditDialog(true);
+  };
+
+  const handleRenewClick = (student: Student) => {
+    if (student.enrollments.length === 0) {
+      toast.error("Este aluno não possui uma matrícula ativa para renovar.");
+      return;
+    }
+    // Pega a matrícula mais recente (assumindo que é a que deve ser renovada)
+    const latestEnrollment = student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0];
+    setEnrollmentToRenew({ student, enrollment: latestEnrollment });
+    setShowRenewDialog(true);
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this student?")) return;
+    if (!confirm("Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita.")) return;
 
     try {
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
-
+      await supabase.from('enrollments').delete().eq('student_id', id);
+      const { error } = await supabase.from('students').delete().eq('id', id);
       if (error) throw error;
-      toast.success("Student deleted successfully");
+      toast.success("Aluno excluído com sucesso");
       onRefresh();
     } catch (error: any) {
-      toast.error("Failed to delete student");
+      toast.error("Falha ao excluir aluno.");
       console.error(error);
     }
   };
 
   const formatDate = (date: string | null) => {
     if (!date) return "N/A";
-    return new Date(date).toLocaleDateString();
+    const d = new Date(date);
+    const adjustedDate = new Date(d.valueOf() + d.getTimezoneOffset() * 60 * 1000);
+    return adjustedDate.toLocaleDateString('pt-BR');
   };
 
   if (loading) {
@@ -58,44 +87,73 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
   if (students.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <p className="text-muted-foreground">No students yet. Add your first student to get started!</p>
+        <p className="text-muted-foreground">Nenhum aluno encontrado.</p>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>CPF</TableHead>
-            <TableHead>Birth Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {students.map((student) => (
-            <TableRow key={student.id}>
-              <TableCell className="font-medium">{student.name}</TableCell>
-              <TableCell>{student.cpf || "N/A"}</TableCell>
-              <TableCell>{formatDate(student.birth_date)}</TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button variant="ghost" size="sm">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleDelete(student.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </TableCell>
+    <>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>CPF</TableHead>
+              <TableHead>Vencimento da Matrícula</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+          </TableHeader>
+          <TableBody>
+            {students.map((student) => {
+              const latestExpiry = student.enrollments.length > 0
+                ? formatDate(student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0].expiry_date)
+                : "Sem Matrícula";
+
+              return (
+                <TableRow key={student.id}>
+                  <TableCell className="font-medium">{student.name}</TableCell>
+                  <TableCell>{student.cpf || "N/A"}</TableCell>
+                  <TableCell>{latestExpiry}</TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
+                      <CalendarClock className="h-4 w-4 mr-2" />
+                      Renovar
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(student)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Card>
+
+      <EditStudentDialog
+        student={selectedStudent}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={() => {
+          onRefresh();
+          setSelectedStudent(null);
+        }}
+      />
+
+      <RenewEnrollmentDialog
+        student={enrollmentToRenew?.student || null}
+        enrollment={enrollmentToRenew?.enrollment || null}
+        open={showRenewDialog}
+        onOpenChange={setShowRenewDialog}
+        onSuccess={() => {
+          onRefresh();
+          setEnrollmentToRenew(null);
+        }}
+      />
+    </>
   );
 };

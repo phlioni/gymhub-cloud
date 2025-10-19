@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { EditModalityDialog } from "./EditModalityDialog";
+import { ManageSchedulesDialog } from "./ManageSchedulesDialog";
 
 interface Modality {
   id: string;
@@ -19,20 +22,30 @@ interface ModalitiesTableProps {
 }
 
 export const ModalitiesTable = ({ modalities, loading, onRefresh }: ModalitiesTableProps) => {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showSchedulesDialog, setShowSchedulesDialog] = useState(false);
+  const [selectedModality, setSelectedModality] = useState<Modality | null>(null);
+
+  const handleEditClick = (modality: Modality) => {
+    setSelectedModality(modality);
+    setShowEditDialog(true);
+  };
+
+  const handleSchedulesClick = (modality: Modality) => {
+    setSelectedModality(modality);
+    setShowSchedulesDialog(true);
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this modality?")) return;
+    if (!confirm("Tem certeza que deseja excluir esta modalidade? Todos os horários associados também serão removidos.")) return;
 
     try {
-      const { error } = await supabase
-        .from('modalities')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('modalities').delete().eq('id', id);
       if (error) throw error;
-      toast.success("Modality deleted successfully");
+      toast.success("Modalidade excluída com sucesso");
       onRefresh();
     } catch (error: any) {
-      toast.error("Failed to delete modality");
+      toast.error("Falha ao excluir a modalidade.");
       console.error(error);
     }
   };
@@ -52,46 +65,64 @@ export const ModalitiesTable = ({ modalities, loading, onRefresh }: ModalitiesTa
   if (modalities.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <p className="text-muted-foreground">No modalities yet. Add your first class type to get started!</p>
+        <p className="text-muted-foreground">Nenhuma modalidade cadastrada. Adicione sua primeira para começar!</p>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {modalities.map((modality) => (
-            <TableRow key={modality.id}>
-              <TableCell className="font-medium">{modality.name}</TableCell>
-              <TableCell>{modality.description || "N/A"}</TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button variant="ghost" size="sm">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Schedules
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleDelete(modality.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </TableCell>
+    <>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Descrição</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+          </TableHeader>
+          <TableBody>
+            {modalities.map((modality) => (
+              <TableRow key={modality.id}>
+                <TableCell className="font-medium">{modality.name}</TableCell>
+                <TableCell>{modality.description || "N/A"}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => handleSchedulesClick(modality)}>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Agenda
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleEditClick(modality)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(modality.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+
+      <EditModalityDialog
+        modality={selectedModality}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={() => {
+          onRefresh();
+          setSelectedModality(null);
+        }}
+      />
+
+      <ManageSchedulesDialog
+        modality={selectedModality}
+        open={showSchedulesDialog}
+        onOpenChange={setShowSchedulesDialog}
+      />
+    </>
   );
 };

@@ -27,7 +27,7 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
   const [students, setStudents] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     quantitySold: "1",
-    studentId: "",
+    studentId: "none", // CORREÇÃO: Usar 'none' em vez de ""
   });
 
   useEffect(() => {
@@ -37,42 +37,42 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
   }, [open]);
 
   const loadStudents = async () => {
-    const { data } = await supabase
-      .from('students')
-      .select('*')
-      .order('name');
+    const { data } = await supabase.from('students').select('*').order('name');
     setStudents(data || []);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organizationId) {
-      toast.error("Organization not found");
+      toast.error("Organização não encontrada");
       return;
     }
 
     const quantitySold = parseInt(formData.quantitySold);
+    if (isNaN(quantitySold) || quantitySold <= 0) {
+      toast.error("Por favor, insira uma quantidade válida.");
+      return;
+    }
+
     if (quantitySold > product.quantity) {
-      toast.error("Not enough stock available");
+      toast.error("Não há estoque suficiente disponível.");
       return;
     }
 
     setLoading(true);
     try {
-      // Create sale record
       const { error: saleError } = await supabase
         .from('sales')
         .insert({
           organization_id: organizationId,
           product_id: product.id,
-          student_id: formData.studentId || null,
+          student_id: formData.studentId === 'none' ? null : formData.studentId, // CORREÇÃO: Tratar 'none' como nulo
           quantity_sold: quantitySold,
           total_price: product.price * quantitySold,
         });
 
       if (saleError) throw saleError;
 
-      // Update product quantity
       const { error: updateError } = await supabase
         .from('products')
         .update({ quantity: product.quantity - quantitySold })
@@ -80,13 +80,12 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
 
       if (updateError) throw updateError;
 
-      toast.success("Sale completed successfully");
+      toast.success("Venda concluída com sucesso");
       onSuccess();
       onOpenChange(false);
-      setFormData({ quantitySold: "1", studentId: "" });
+      setFormData({ quantitySold: "1", studentId: "none" });
     } catch (error: any) {
-      toast.error(error.message || "Failed to complete sale");
-      console.error(error);
+      toast.error(error.message || "Falha ao concluir a venda");
     } finally {
       setLoading(false);
     }
@@ -96,26 +95,24 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Sell Product</DialogTitle>
+          <DialogTitle>Vender Produto</DialogTitle>
           <DialogDescription>
-            Processing sale for {product.name}
+            Processando venda para {product.name}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Product</Label>
-            <Input value={product.name} disabled />
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Preço Unitário</Label>
+              <Input value={`R$ ${Number(product.price).toFixed(2)}`} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Estoque Atual</Label>
+              <Input value={product.quantity} disabled />
+            </div>
           </div>
           <div className="space-y-2">
-            <Label>Price per unit</Label>
-            <Input value={`R$ ${Number(product.price).toFixed(2)}`} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Available Stock</Label>
-            <Input value={product.quantity} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="quantitySold">Quantity to Sell *</Label>
+            <Label htmlFor="quantitySold">Quantidade a Vender *</Label>
             <Input
               id="quantitySold"
               type="number"
@@ -128,24 +125,24 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
             />
           </div>
           <div className="space-y-2">
-            <Label>Total Price</Label>
-            <Input 
-              value={`R$ ${(product.price * parseInt(formData.quantitySold || "0")).toFixed(2)}`} 
-              disabled 
+            <Label>Preço Total</Label>
+            <Input
+              value={`R$ ${(product.price * (parseInt(formData.quantitySold) || 0)).toFixed(2)}`}
+              disabled
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="student">Assign to Student (Optional)</Label>
+            <Label htmlFor="student">Atribuir a um Aluno (Opcional)</Label>
             <Select
               value={formData.studentId}
               onValueChange={(value) => setFormData({ ...formData, studentId: value })}
               disabled={loading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a student (optional)" />
+                <SelectValue placeholder="Selecione um aluno (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None (Anonymous sale)</SelectItem>
+                <SelectItem value="none">Nenhum (venda anônima)</SelectItem>
                 {students.map((student) => (
                   <SelectItem key={student.id} value={student.id}>
                     {student.name}
@@ -156,10 +153,10 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Processing..." : "Complete Sale"}
+              {loading ? "Processando..." : "Concluir Venda"}
             </Button>
           </div>
         </form>

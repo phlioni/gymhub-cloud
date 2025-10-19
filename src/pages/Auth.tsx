@@ -13,10 +13,9 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLogin, setIsLogin] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
+    // Verifica se o usuário já está logado
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -25,7 +24,7 @@ const Auth = () => {
           .select('role')
           .eq('id', session.user.id)
           .single();
-        
+
         if (profile?.role === 'superadmin') {
           navigate('/super-admin');
         } else {
@@ -41,32 +40,28 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (data.session) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', data.session.user.id)
-            .single();
-          
-          if (profile?.role === 'superadmin') {
-            navigate('/super-admin');
-          } else {
-            navigate('/dashboard');
-          }
+      if (data.session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.session.user.id)
+          .single();
+
+        if (profile?.role === 'superadmin') {
+          navigate('/super-admin');
+        } else {
+          navigate('/dashboard');
         }
-      } else {
-        toast.error("Please contact your administrator to create an account");
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
+      toast.error(error.message || "Ocorreu um erro");
     } finally {
       setLoading(false);
     }
@@ -85,7 +80,7 @@ const Auth = () => {
             GymHub
           </CardTitle>
           <CardDescription>
-            {isLogin ? "Sign in to your account" : "Create your account"}
+            Acesse sua conta para continuar
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -95,7 +90,7 @@ const Auth = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="voce@exemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -103,7 +98,7 @@ const Auth = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -119,7 +114,7 @@ const Auth = () => {
               className="w-full"
               disabled={loading}
             >
-              {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
+              {loading ? "Aguarde..." : "Entrar"}
             </Button>
           </form>
         </CardContent>

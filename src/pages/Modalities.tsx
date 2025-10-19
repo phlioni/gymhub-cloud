@@ -51,7 +51,7 @@ const Modalities = () => {
       if (error) throw error;
       setModalities(data || []);
     } catch (error: any) {
-      toast.error("Failed to load modalities");
+      toast.error("Falha ao carregar as modalidades");
       console.error(error);
     } finally {
       setLoading(false);
@@ -60,27 +60,26 @@ const Modalities = () => {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
       <main className="flex-1 p-8 bg-gradient-to-br from-background via-muted/20 to-background">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Modalities
+                Modalidades
               </h1>
               <p className="text-muted-foreground">
-                Manage class types and schedules
+                Gerencie os tipos de aulas e horários
               </p>
             </div>
             <Button onClick={() => setShowAddDialog(true)} size="lg">
               <Plus className="h-5 w-5 mr-2" />
-              Add Modality
+              Adicionar Modalidade
             </Button>
           </div>
 
-          <ModalitiesTable 
-            modalities={modalities} 
-            loading={loading} 
+          <ModalitiesTable
+            modalities={modalities}
+            loading={loading}
             onRefresh={loadModalities}
           />
 

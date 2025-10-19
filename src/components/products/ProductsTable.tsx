@@ -6,6 +6,7 @@ import { Edit, Trash2, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SellProductDialog } from "./SellProductDialog";
+import { EditProductDialog } from "./EditProductDialog";
 
 interface Product {
   id: string;
@@ -23,22 +24,19 @@ interface ProductsTableProps {
 }
 
 export const ProductsTable = ({ products, loading, onRefresh, organizationId }: ProductsTableProps) => {
-  const [sellProduct, setSellProduct] = useState<Product | null>(null);
+  const [productToSell, setProductToSell] = useState<Product | null>(null);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
 
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
-      toast.success("Product deleted successfully");
+      toast.success("Produto excluído com sucesso");
       onRefresh();
     } catch (error: any) {
-      toast.error("Failed to delete product");
+      toast.error("Falha ao excluir produto. Verifique se existem vendas associadas a ele.");
       console.error(error);
     }
   };
@@ -58,7 +56,7 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId }: 
   if (products.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <p className="text-muted-foreground">No products yet. Add your first product to get started!</p>
+        <p className="text-muted-foreground">Nenhum produto encontrado.</p>
       </Card>
     );
   }
@@ -69,11 +67,11 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId }: 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead>Marca</TableHead>
+              <TableHead>Preço</TableHead>
+              <TableHead>Estoque</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -87,23 +85,15 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId }: 
                     {product.quantity}
                   </span>
                 </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setSellProduct(product)}
-                  >
+                <TableCell className="text-right space-x-1">
+                  <Button variant="outline" size="sm" onClick={() => setProductToSell(product)}>
                     <ShoppingCart className="h-4 w-4 mr-2" />
-                    Sell
+                    Vender
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="icon" onClick={() => setProductToEdit(product)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleDelete(product.id)}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </TableCell>
@@ -113,12 +103,21 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId }: 
         </Table>
       </Card>
 
-      {sellProduct && (
+      {productToSell && (
         <SellProductDialog
-          product={sellProduct}
-          open={!!sellProduct}
-          onOpenChange={(open) => !open && setSellProduct(null)}
+          product={productToSell}
+          open={!!productToSell}
+          onOpenChange={(open) => !open && setProductToSell(null)}
           organizationId={organizationId}
+          onSuccess={onRefresh}
+        />
+      )}
+
+      {productToEdit && (
+        <EditProductDialog
+          product={productToEdit}
+          open={!!productToEdit}
+          onOpenChange={(open) => !open && setProductToEdit(null)}
           onSuccess={onRefresh}
         />
       )}

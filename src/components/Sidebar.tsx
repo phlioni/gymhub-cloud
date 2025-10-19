@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Users, 
-  GraduationCap, 
-  Package, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  Package,
+  Settings,
   LogOut,
   Dumbbell
 } from "lucide-react";
@@ -15,20 +15,25 @@ import { toast } from "sonner";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Students", href: "/students", icon: Users },
-  { name: "Modalities", href: "/modalities", icon: GraduationCap },
-  { name: "Products", href: "/products", icon: Package },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Alunos", href: "/students", icon: Users },
+  { name: "Modalidades", href: "/modalities", icon: GraduationCap },
+  { name: "Produtos", href: "/products", icon: Package },
+  { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
-export const Sidebar = () => {
+interface SidebarProps {
+  organizationName?: string;
+  logoUrl?: string | null;
+}
+
+export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast.error("Failed to sign out");
+      toast.error("Falha ao sair");
     } else {
       navigate('/');
     }
@@ -37,12 +42,16 @@ export const Sidebar = () => {
   return (
     <div className="flex flex-col w-64 bg-sidebar border-r border-sidebar-border">
       <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Dumbbell className="h-6 w-6 text-primary" />
-          </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            GymHub
+        <div className="flex items-center gap-3">
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="h-10 w-10 rounded-lg object-cover" />
+          ) : (
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Dumbbell className="h-6 w-6 text-primary" />
+            </div>
+          )}
+          <span className="text-lg font-bold text-foreground">
+            {organizationName || "GymHub"}
           </span>
         </div>
       </div>
@@ -50,7 +59,7 @@ export const Sidebar = () => {
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.href;
+          const isActive = location.pathname.startsWith(item.href);
           return (
             <Link
               key={item.name}
@@ -76,7 +85,7 @@ export const Sidebar = () => {
           onClick={handleSignOut}
         >
           <LogOut className="h-5 w-5 mr-3" />
-          Sign Out
+          Sair
         </Button>
       </div>
     </div>

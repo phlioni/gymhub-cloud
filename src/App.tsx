@@ -11,6 +11,7 @@ import Products from "./pages/Products";
 import Settings from "./pages/Settings";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound";
+import AppLayout from "./components/AppLayout"; // 1. Importe o novo layout
 
 const queryClient = new QueryClient();
 
@@ -21,14 +22,21 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Rotas que NÃO usam o layout principal */}
           <Route path="/" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/students" element={<Students />} />
-          <Route path="/modalities" element={<Modalities />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/super-admin" element={<SuperAdmin />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+          {/* Rota "pai" que usa o AppLayout */}
+          <Route element={<AppLayout />}>
+            {/* Rotas "filhas" que serão renderizadas dentro do AppLayout */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/students" element={<Students />} />
+            <Route path="/modalities" element={<Modalities />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+
+          {/* Rota para páginas não encontradas */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
