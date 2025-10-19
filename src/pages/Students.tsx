@@ -55,7 +55,8 @@ const Students = () => {
         .from('students')
         .select(`
           *,
-          enrollments ( id, expiry_date, price, modalities ( name ) )
+          enrollments ( id, expiry_date, price, modalities ( name ) ),
+          check_ins ( count )
         `)
         .order('created_at', { ascending: false });
 

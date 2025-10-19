@@ -11,7 +11,8 @@ import Products from "./pages/Products";
 import Settings from "./pages/Settings";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound";
-import AppLayout from "./components/AppLayout"; // 1. Importe o novo layout
+import AppLayout from "./components/AppLayout";
+import CheckIns from "./pages/CheckIns";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/students" element={<Students />} />
             <Route path="/modalities" element={<Modalities />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/check-ins" element={<CheckIns />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
 
