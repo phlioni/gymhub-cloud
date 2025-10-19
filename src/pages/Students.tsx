@@ -50,12 +50,12 @@ const Students = () => {
   const loadStudents = async () => {
     setLoading(true);
     try {
-      // Busca alunos e suas matrículas associadas
+      // MODIFICAÇÃO: Busca matrículas com preço e nome da modalidade
       const { data, error } = await supabase
         .from('students')
         .select(`
           *,
-          enrollments ( id, expiry_date )
+          enrollments ( id, expiry_date, price, modalities ( name ) )
         `)
         .order('created_at', { ascending: false });
 

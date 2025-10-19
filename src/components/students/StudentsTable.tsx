@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EditStudentDialog } from "./EditStudentDialog";
 import { RenewEnrollmentDialog } from "./RenewEnrollmentDialog";
-import { getEnrollmentStatus } from "@/utils/enrollmentStatus"; // Importe a nova função
+import { getEnrollmentStatus } from "@/utils/enrollmentStatus";
 
 interface Student {
   id: string;
@@ -21,6 +21,8 @@ interface Student {
   enrollments: {
     id: string;
     expiry_date: string;
+    price: number | null;
+    modalities: { name: string } | null;
   }[];
 }
 
@@ -91,8 +93,8 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Status da Matrícula</TableHead>
+                <TableHead>Modalidades</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-center">Automação</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -105,18 +107,24 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
                 const status = getEnrollmentStatus(latestEnrollment?.expiry_date || null);
                 const isAutomationActive = status.daysRemaining !== null && status.daysRemaining <= 10 && status.daysRemaining >= 1;
+                const modalityNames = student.enrollments.map(e => e.modalities?.name).join(', ');
 
                 return (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell>{student.phone_number || "N/A"}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>{student.name}</div>
+                      <div className="text-xs text-muted-foreground">{student.phone_number || "Sem telefone"}</div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{modalityNames || "N/A"}</TableCell>
                     <TableCell>
                       <Badge variant={status.variant}>{status.text}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Tooltip>
-                        <TooltipTrigger>
-                          {isAutomationActive ? <Bell className="h-5 w-5 text-yellow-500" /> : <BellOff className="h-5 w-5 text-muted-foreground/50" />}
+                        <TooltipTrigger asChild>
+                          <span className="inline-block">
+                            {isAutomationActive ? <Bell className="h-5 w-5 text-yellow-500" /> : <BellOff className="h-5 w-5 text-muted-foreground/50" />}
+                          </span>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{isAutomationActive ? "Lembretes de vencimento por WhatsApp estão ativos." : "Automação de lembretes inativa."}</p>

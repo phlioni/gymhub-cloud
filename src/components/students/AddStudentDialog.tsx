@@ -14,27 +14,48 @@ interface AddStudentDialogProps {
   onSuccess: () => void;
 }
 
+interface Modality {
+  id: string;
+  name: string;
+  price: number | null;
+}
+
 export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess }: AddStudentDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [modalities, setModalities] = useState<any[]>([]);
+  const [modalities, setModalities] = useState<Modality[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     cpf: "",
     birthDate: "",
-    phoneNumber: "", // Novo campo
+    phoneNumber: "",
     modalityId: "",
+    enrollmentPrice: "", // Novo campo para o preço
     expiryDate: "",
   });
 
   useEffect(() => {
     if (open) {
       loadModalities();
+      // Define a data de vencimento padrão para 30 dias a partir de hoje
+      const today = new Date();
+      today.setDate(today.getDate() + 30);
+      const formattedDefaultDate = today.toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, expiryDate: formattedDefaultDate }));
     }
   }, [open]);
 
   const loadModalities = async () => {
-    const { data } = await supabase.from('modalities').select('*').order('name');
-    setModalities(data || []);
+    const { data } = await supabase.from('modalities').select('id, name, price').order('name');
+    setModalities(data as Modality[] || []);
+  };
+
+  const handleModalityChange = (modalityId: string) => {
+    const selectedModality = modalities.find(m => m.id === modalityId);
+    setFormData({
+      ...formData,
+      modalityId: modalityId,
+      enrollmentPrice: selectedModality?.price ? String(selectedModality.price) : ""
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +74,7 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
           name: formData.name,
           cpf: formData.cpf || null,
           birth_date: formData.birthDate || null,
-          phone_number: formData.phoneNumber || null, // Novo campo
+          phone_number: formData.phoneNumber || null,
         })
         .select()
         .single();
@@ -67,6 +88,7 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
             student_id: student.id,
             modality_id: formData.modalityId,
             expiry_date: formData.expiryDate,
+            price: formData.enrollmentPrice ? parseFloat(formData.enrollmentPrice) : null,
           });
         if (enrollmentError) throw enrollmentError;
       }
@@ -74,7 +96,7 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
       toast.success("Aluno adicionado com sucesso");
       onSuccess();
       onOpenChange(false);
-      setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "", modalityId: "", expiryDate: "" });
+      setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "", modalityId: "", enrollmentPrice: "", expiryDate: "" });
     } catch (error: any) {
       toast.error(error.message || "Falha ao adicionar aluno");
       console.error(error);
@@ -92,7 +114,8 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
             Insira as informações do aluno e os detalhes da matrícula.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          {/* ... campos de nome, telefone, cpf, data de nascimento ... */}
           <div className="space-y-2">
             <Label htmlFor="name">Nome *</Label>
             <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
@@ -100,28 +123,37 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
           <div className="space-y-2">
             <Label htmlFor="phoneNumber">Telefone (WhatsApp)</Label>
             <Input id="phoneNumber" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+5513999998888" disabled={loading} />
-            <p className="text-xs text-muted-foreground">Formato internacional: +55 (DDD) (Número)</p>
+            <p className="text-xs text-muted-foreground">Formato: +55 (DDD) (Número)</p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="cpf">CPF</Label>
-            <Input id="cpf" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} placeholder="000.000.000-00" disabled={loading} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cpf">CPF</Label>
+              <Input id="cpf" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} placeholder="000.000.000-00" disabled={loading} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="birthDate">Nascimento</Label>
+              <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="birthDate">Data de Nascimento</Label>
-            <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="modality">Modalidade Inicial</Label>
-            <Select value={formData.modalityId} onValueChange={(value) => setFormData({ ...formData, modalityId: value })} disabled={loading}>
+
+          <div className="space-y-2 pt-4 border-t">
+            <Label className="font-semibold">Matrícula Inicial (Opcional)</Label>
+            <Select value={formData.modalityId} onValueChange={handleModalityChange} disabled={loading}>
               <SelectTrigger><SelectValue placeholder="Selecione uma modalidade" /></SelectTrigger>
               <SelectContent>
                 {modalities.map((modality) => (<SelectItem key={modality.id} value={modality.id}>{modality.name}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="expiryDate">Data de Vencimento da Matrícula</Label>
-            <Input id="expiryDate" type="date" value={formData.expiryDate} onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })} disabled={loading || !formData.modalityId} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="enrollmentPrice">Valor (R$)</Label>
+              <Input id="enrollmentPrice" type="number" step="0.01" min="0" placeholder="Ex: 99,90" value={formData.enrollmentPrice} onChange={(e) => setFormData({ ...formData, enrollmentPrice: e.target.value })} disabled={loading || !formData.modalityId} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="expiryDate">Vencimento</Label>
+              <Input id="expiryDate" type="date" value={formData.expiryDate} onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })} disabled={loading || !formData.modalityId} />
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
