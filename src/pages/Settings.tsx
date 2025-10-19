@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload } from "lucide-react";
+import { Upload, Info, CheckCircle, Smartphone, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
@@ -53,42 +53,23 @@ const Settings = () => {
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0 || !organizationId) {
-      return;
-    }
-
+    if (!event.target.files || event.target.files.length === 0 || !organizationId) return;
     const file = event.target.files[0];
     const fileExt = file.name.split('.').pop();
     const fileName = `${organizationId}/logo.${fileExt}`;
 
     setUploading(true);
     try {
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-
+      const { error: uploadError } = await supabase.storage.from('logos').upload(fileName, file, { cacheControl: '3600', upsert: true });
       if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('logos')
-        .getPublicUrl(fileName);
-
+      const { data: urlData } = supabase.storage.from('logos').getPublicUrl(fileName);
       const publicUrlWithCacheBuster = `${urlData.publicUrl}?t=${new Date().getTime()}`;
-
-      const { error: updateError } = await supabase
-        .from('organizations')
-        .update({ logo_url: urlData.publicUrl })
-        .eq('id', organizationId);
-
+      const { error: updateError } = await supabase.from('organizations').update({ logo_url: urlData.publicUrl }).eq('id', organizationId);
       if (updateError) throw updateError;
-
       setFormData({ ...formData, logoUrl: publicUrlWithCacheBuster });
       toast.success("Logo enviado com sucesso");
     } catch (error: any) {
-      toast.error("Falha ao enviar o logo. Verifique as permissões do Storage.");
+      toast.error("Falha ao enviar o logo.");
       console.error(error);
     } finally {
       setUploading(false);
@@ -98,176 +79,117 @@ const Settings = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organizationId) {
-      toast.error("ID da organização não encontrado. Recarregue a página.");
+      toast.error("ID da organização não encontrado.");
       return;
     }
-
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('organizations')
-        .update({
-          name: formData.name,
-          address: formData.address,
-          owner_name: formData.ownerName,
-          phone_number: formData.phoneNumber,
-          business_hours: formData.businessHours,
-        })
-        .eq('id', organizationId);
-
+      const { error } = await supabase.from('organizations').update({
+        name: formData.name,
+        address: formData.address,
+        owner_name: formData.ownerName,
+        phone_number: formData.phoneNumber,
+        business_hours: formData.businessHours,
+      }).eq('id', organizationId);
       if (error) throw error;
-
       toast.success("Configurações salvas com sucesso!");
     } catch (error: any) {
       toast.error(error.message || "Falha ao salvar as configurações");
-      console.error(error);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
-      <main className="flex-1 p-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
-              Configurações
-            </h1>
-            <p className="text-base text-muted-foreground">
-              Gerencie as informações da sua organização
-            </p>
-          </div>
+    // CORREÇÃO AQUI: A classe `flex-1` é a chave para fazer o <main> crescer e ocupar o espaço
+    <main className="flex-1 p-8">
+      <div className="max-w-4xl mx-auto space-y-6 w-full">
+        <div>
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Configurações
+          </h1>
+          <p className="text-muted-foreground">
+            Gerencie as informações e automações da sua organização
+          </p>
+        </div>
 
-          {loading ? (
-            <Card className="shadow-lg border-border/50">
-              <CardContent className="p-12">
-                <div className="space-y-5">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-14 bg-muted/50 rounded-lg" />
-                  ))}
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Detalhes da Organização</TabsTrigger>
+            <TabsTrigger value="automation">Automação de Lembretes</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details">
+            {loading ? (
+              <Card className="mt-4"><CardContent className="p-12"><div className="space-y-4">{[1, 2, 3, 4].map((i) => (<Skeleton key={i} className="h-12 bg-muted rounded" />))}</div></CardContent></Card>
+            ) : (
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle>Perfil da Academia</CardTitle>
+                  <CardDescription>Atualize as informações que seus alunos e administradores veem.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Logo</Label>
+                      <div className="flex items-center gap-4">
+                        {formData.logoUrl ? (<img src={formData.logoUrl} alt="Logo da Organização" className="h-20 w-20 object-cover rounded-lg border" />) : (<div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center"><span className="text-xs text-muted-foreground">Sem Logo</span></div>)}
+                        <input type="file" ref={fileInputRef} onChange={handleLogoUpload} accept="image/png, image/jpeg" style={{ display: 'none' }} disabled={uploading} />
+                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}><Upload className="mr-2 h-4 w-4" />{uploading ? "Enviando..." : "Enviar Logo"}</Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2"><Label htmlFor="name">Nome *</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={saving} /></div>
+                    <div className="space-y-2"><Label htmlFor="address">Endereço</Label><Textarea id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} disabled={saving} rows={3} /></div>
+                    <div className="space-y-2"><Label htmlFor="ownerName">Nome do Responsável</Label><Input id="ownerName" value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} disabled={saving} /></div>
+                    <div className="space-y-2"><Label htmlFor="phoneNumber">Telefone</Label><Input id="phoneNumber" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={saving} /></div>
+                    <div className="space-y-2"><Label htmlFor="businessHours">Horário de Funcionamento</Label><Textarea id="businessHours" value={formData.businessHours} onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" disabled={saving} rows={3} /></div>
+                    <div className="flex justify-end pt-4"><Button type="submit" disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar Alterações"}</Button></div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="automation">
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Info className="h-5 w-5 text-primary" />Como Funciona a Automação de Lembretes</CardTitle>
+                <CardDescription>Entenda como o sistema ajuda a reduzir a inadimplência e a reter alunos.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-sm text-muted-foreground">
+                  Nosso sistema monitora automaticamente as datas de vencimento de todas as matrículas. Quando uma matrícula está prestes a vencer, uma sequência de lembretes é enviada via WhatsApp para o aluno, incentivando a renovação.
+                </p>
+                <div className="p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="h-4 w-4" />Cronograma de Envio</h4>
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    <li>**3 dias** antes do vencimento</li>
+                    <li>**1 dia** antes do vencimento (no dia anterior)</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Pré-requisitos para Funcionar</h4>
+                  <ul className="list-disc list-inside text-sm space-y-2 text-muted-foreground">
+                    <li>
+                      O número de telefone do aluno deve estar cadastrado na tela de "Alunos".
+                    </li>
+                    <li>
+                      O número deve estar no formato internacional completo, incluindo o código do país (+55), DDD e o número. Ex: <span className="font-mono text-xs bg-muted p-1 rounded">+5513999998888</span>.
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2 text-blue-800"><Smartphone className="h-4 w-4" />Status da Integração com o WhatsApp</h4>
+                  <p className="text-sm text-blue-700">
+                    Sua conta está configurada para enviar mensagens através do parceiro oficial Twilio. Todas as mensagens são enviadas usando modelos pré-aprovados pela Meta para garantir a entrega.
+                  </p>
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <Card className="shadow-lg border-border/50">
-              <CardHeader className="pb-6">
-                <CardTitle className="text-2xl">Detalhes da Organização</CardTitle>
-                <CardDescription className="text-base">
-                  Atualize as informações da sua academia ou CT
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-7">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Logo</Label>
-                    <div className="flex items-center gap-5">
-                      {formData.logoUrl ? (
-                        <img
-                          src={formData.logoUrl}
-                          alt="Logo da Organização"
-                          className="h-24 w-24 object-cover rounded-xl border-2 border-border/50 shadow-md"
-                        />
-                      ) : (
-                        <div className="h-24 w-24 bg-muted/50 rounded-xl flex items-center justify-center border-2 border-dashed border-border">
-                          <span className="text-xs text-muted-foreground font-medium">Sem Logo</span>
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleLogoUpload}
-                        accept="image/png, image/jpeg"
-                        style={{ display: 'none' }}
-                        disabled={uploading}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        className="h-11 shadow-sm hover:shadow transition-all"
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        {uploading ? "Enviando..." : "Enviar Logo"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-7 md:grid-cols-2">
-                    <div className="space-y-3 md:col-span-2">
-                      <Label htmlFor="name" className="text-sm font-medium">Nome *</Label>
-                      <Input 
-                        id="name" 
-                        value={formData.name} 
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                        required 
-                        disabled={saving}
-                        className="h-11 shadow-sm"
-                      />
-                    </div>
-                    <div className="space-y-3 md:col-span-2">
-                      <Label htmlFor="address" className="text-sm font-medium">Endereço</Label>
-                      <Textarea 
-                        id="address" 
-                        value={formData.address} 
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })} 
-                        disabled={saving} 
-                        rows={3}
-                        className="shadow-sm resize-none"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="ownerName" className="text-sm font-medium">Nome do Responsável</Label>
-                      <Input 
-                        id="ownerName" 
-                        value={formData.ownerName} 
-                        onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} 
-                        disabled={saving}
-                        className="h-11 shadow-sm"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="phoneNumber" className="text-sm font-medium">Telefone</Label>
-                      <Input 
-                        id="phoneNumber" 
-                        type="tel" 
-                        value={formData.phoneNumber} 
-                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} 
-                        disabled={saving}
-                        className="h-11 shadow-sm"
-                      />
-                    </div>
-                    <div className="space-y-3 md:col-span-2">
-                      <Label htmlFor="businessHours" className="text-sm font-medium">Horário de Funcionamento</Label>
-                      <Textarea 
-                        id="businessHours" 
-                        value={formData.businessHours} 
-                        onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} 
-                        placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" 
-                        disabled={saving} 
-                        rows={3}
-                        className="shadow-sm resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-6 border-t border-border/50">
-                    <Button 
-                      type="submit" 
-                      disabled={saving || uploading}
-                      className="h-11 px-8 shadow-md hover:shadow-lg transition-all"
-                    >
-                      {saving ? "Salvando..." : "Salvar Alterações"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </main>
-    </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </main>
   );
 };
 

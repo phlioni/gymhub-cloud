@@ -55,24 +55,25 @@ const AppLayout = () => {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen">
-                <div className="flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0 p-4 space-y-4">
-                    <Skeleton className="h-12 w-full" />
+            <div className="flex h-screen">
+                <div className="flex flex-col w-72 bg-sidebar border-r border-sidebar-border h-screen sticky top-0 p-4 space-y-4">
+                    <Skeleton className="h-16 w-full" />
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
                 </div>
                 <main className="flex-1 p-8">
-                    <Skeleton className="h-full w-full" />
+                    <Skeleton className="h-full w-full rounded-lg" />
                 </main>
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen bg-muted/20">
+        <div className="flex h-screen bg-muted/30">
             <Sidebar organizationName={organization?.name} logoUrl={organization?.logo_url} />
-            <div className="flex-1">
+            {/* CORREÇÃO AQUI: Adicionamos 'flex' para que o <Outlet> possa crescer */}
+            <div className="flex flex-1 flex-col overflow-y-auto">
                 <Outlet />
             </div>
         </div>

@@ -1,43 +1,31 @@
-export const getEnrollmentStatus = (expiryDate: string) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const expiry = new Date(expiryDate);
-  expiry.setHours(0, 0, 0, 0);
-  
-  const diffTime = expiry.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+import { differenceInDays, startOfDay } from 'date-fns';
 
-  if (diffDays < 0) {
-    return { 
-      label: "Vencida", 
-      variant: "destructive" as const, 
-      days: Math.abs(diffDays),
-      shouldNotify: true,
-      notificationSent: false // This will be tracked in DB in future
-    };
-  } else if (diffDays === 0) {
-    return { 
-      label: "Vence Hoje", 
-      variant: "destructive" as const, 
-      days: 0,
-      shouldNotify: true,
-      notificationSent: false
-    };
-  } else if (diffDays <= 10) {
-    return { 
-      label: `${diffDays} dias`, 
-      variant: "secondary" as const, 
-      days: diffDays,
-      shouldNotify: true,
-      notificationSent: false
-    };
+export function getEnrollmentStatus(expiryDate: string | null): { text: string; variant: 'default' | 'secondary' | 'destructive'; daysRemaining: number | null } {
+  if (!expiryDate) {
+    return { text: "Sem Matrícula", variant: "secondary", daysRemaining: null };
   }
-  
-  return { 
-    label: "Em dia", 
-    variant: "default" as const, 
-    days: diffDays,
-    shouldNotify: false,
-    notificationSent: false
-  };
-};
+
+  const today = startOfDay(new Date());
+
+  // --- CORREÇÃO AQUI ---
+  // Criamos a data a partir do UTC e ajustamos para o fuso local para evitar o erro de um dia.
+  const expiryDateUTC = new Date(expiryDate);
+  const expiration = startOfDay(new Date(expiryDateUTC.valueOf() + expiryDateUTC.getTimezoneOffset() * 60 * 1000));
+  // ---------------------
+
+  const daysRemaining = differenceInDays(expiration, today);
+
+  if (daysRemaining < 0) {
+    return { text: "Vencido", variant: "destructive", daysRemaining };
+  }
+  if (daysRemaining === 0) {
+    return { text: "Vence Hoje", variant: "destructive", daysRemaining };
+  }
+  if (daysRemaining <= 10) {
+    // Adiciona uma lógica para singular/plural
+    const dayText = daysRemaining === 1 ? 'dia' : 'dias';
+    return { text: `Vence em ${daysRemaining} ${dayText}`, variant: "secondary", daysRemaining };
+  }
+
+  return { text: "Em Dia", variant: "default", daysRemaining };
+}

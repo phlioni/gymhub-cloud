@@ -40,7 +40,8 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
   };
 
   return (
-    <div className="flex flex-col w-72 bg-sidebar border-r border-sidebar-border shadow-sm">
+    // CORREÇÃO AQUI: Adicionado h-screen para altura total e sticky top-0 para fixar
+    <div className="flex flex-col w-72 bg-sidebar border-r border-sidebar-border shadow-sm h-screen sticky top-0">
       <div className="p-6 border-b border-sidebar-border bg-gradient-to-br from-primary/5 to-transparent">
         <div className="flex items-center gap-3">
           {logoUrl ? (
@@ -70,8 +71,8 @@ export const Sidebar = ({ organizationName, logoUrl }: SidebarProps) => {
               className={cn(
                 "group flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-gradient-to-r from-primary to-primary/90 text-white shadow-md shadow-primary/25 scale-[1.02]"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:scale-[1.01] hover:shadow-sm"
+                  ? "bg-gradient-to-r from-primary to-primary/90 text-white shadow-md shadow-primary/25"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent"
               )}
             >
               <Icon className={cn(

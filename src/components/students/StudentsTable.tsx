@@ -2,18 +2,21 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, CalendarClock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Edit, Trash2, CalendarClock, Bell, BellOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EditStudentDialog } from "./EditStudentDialog";
 import { RenewEnrollmentDialog } from "./RenewEnrollmentDialog";
+import { getEnrollmentStatus } from "@/utils/enrollmentStatus"; // Importe a nova função
 
 interface Student {
   id: string;
   name: string;
   cpf: string | null;
   birth_date: string | null;
-  phone_number: string | null; // Novo campo
+  phone_number: string | null;
   created_at: string;
   enrollments: {
     id: string;
@@ -30,7 +33,6 @@ interface StudentsTableProps {
 export const StudentsTable = ({ students, loading, onRefresh }: StudentsTableProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-
   const [showRenewDialog, setShowRenewDialog] = useState(false);
   const [enrollmentToRenew, setEnrollmentToRenew] = useState<{ student: Student; enrollment: Student['enrollments'][0] } | null>(null);
 
@@ -41,7 +43,7 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
   const handleRenewClick = (student: Student) => {
     if (student.enrollments.length === 0) {
-      toast.error("Este aluno não possui uma matrícula ativa para renovar.");
+      toast.error("Este aluno não possui uma matrícula para renovar.");
       return;
     }
     const latestEnrollment = student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0];
@@ -51,7 +53,6 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita.")) return;
-
     try {
       await supabase.from('enrollments').delete().eq('student_id', id);
       const { error } = await supabase.from('students').delete().eq('id', id);
@@ -64,20 +65,11 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
     }
   };
 
-  const formatDate = (date: string | null) => {
-    if (!date) return "N/A";
-    const d = new Date(date);
-    const adjustedDate = new Date(d.valueOf() + d.getTimezoneOffset() * 60 * 1000);
-    return adjustedDate.toLocaleDateString('pt-BR');
-  };
-
   if (loading) {
     return (
       <Card className="p-6">
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-12 bg-muted animate-pulse rounded" />
-          ))}
+          {[1, 2, 3].map((i) => (<div key={i} className="h-12 bg-muted animate-pulse rounded" />))}
         </div>
       </Card>
     );
@@ -93,66 +85,66 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
   return (
     <>
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Vencimento da Matrícula</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.map((student) => {
-              const latestExpiry = student.enrollments.length > 0
-                ? formatDate(student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0].expiry_date)
-                : "Sem Matrícula";
+      <TooltipProvider>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Status da Matrícula</TableHead>
+                <TableHead className="text-center">Automação</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {students.map((student) => {
+                const latestEnrollment = student.enrollments.length > 0
+                  ? student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0]
+                  : null;
 
-              return (
-                <TableRow key={student.id}>
-                  <TableCell className="font-medium">{student.name}</TableCell>
-                  <TableCell>{student.phone_number || "N/A"}</TableCell>
-                  <TableCell>{latestExpiry}</TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
-                      <CalendarClock className="h-4 w-4 mr-2" />
-                      Renovar
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(student)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </Card>
+                const status = getEnrollmentStatus(latestEnrollment?.expiry_date || null);
+                const isAutomationActive = status.daysRemaining !== null && status.daysRemaining <= 10 && status.daysRemaining >= 1;
 
-      <EditStudentDialog
-        student={selectedStudent}
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        onSuccess={() => {
-          onRefresh();
-          setSelectedStudent(null);
-        }}
-      />
+                return (
+                  <TableRow key={student.id}>
+                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell>{student.phone_number || "N/A"}</TableCell>
+                    <TableCell>
+                      <Badge variant={status.variant}>{status.text}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          {isAutomationActive ? <Bell className="h-5 w-5 text-yellow-500" /> : <BellOff className="h-5 w-5 text-muted-foreground/50" />}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{isAutomationActive ? "Lembretes de vencimento por WhatsApp estão ativos." : "Automação de lembretes inativa."}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
+                        <CalendarClock className="h-4 w-4 mr-2" />
+                        Renovar
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(student)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      </TooltipProvider>
 
-      <RenewEnrollmentDialog
-        student={enrollmentToRenew?.student || null}
-        enrollment={enrollmentToRenew?.enrollment || null}
-        open={showRenewDialog}
-        onOpenChange={setShowRenewDialog}
-        onSuccess={() => {
-          onRefresh();
-          setEnrollmentToRenew(null);
-        }}
-      />
+      <EditStudentDialog student={selectedStudent} open={showEditDialog} onOpenChange={setShowEditDialog} onSuccess={onRefresh} />
+      <RenewEnrollmentDialog student={enrollmentToRenew?.student || null} enrollment={enrollmentToRenew?.enrollment || null} open={showRenewDialog} onOpenChange={setShowRenewDialog} onSuccess={onRefresh} />
     </>
   );
 };
