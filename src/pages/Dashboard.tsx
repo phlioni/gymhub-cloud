@@ -122,18 +122,18 @@ const Dashboard = () => {
 
   return (
     <>
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
           <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Dashboard
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm md:text-base">
               A visão geral e em tempo real da sua academia.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento Anual (Matrículas)</CardTitle><TrendingUp className="h-5 w-5 text-blue-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(stats.annualEnrollmentRevenue)}</div>}<p className="text-xs text-muted-foreground">Receita acumulada no ano corrente.</p></CardContent></Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento do Mês (Matrículas)</CardTitle><DollarSign className="h-5 w-5 text-green-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <> <div className="text-2xl font-bold">{formatCurrency(stats.monthlyEnrollmentRevenue)}</div> <p className={cn("text-xs", stats.enrollmentRevenueChange >= 0 ? "text-green-600" : "text-red-600")}> {stats.enrollmentRevenueChange >= 0 ? '+' : ''}{stats.enrollmentRevenueChange.toFixed(1)}% vs. mês anterior </p> </>}</CardContent></Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento do Mês (Produtos)</CardTitle><ShoppingBag className="h-5 w-5 text-green-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(stats.monthlyProductRevenue)}</div>}<p className="text-xs text-muted-foreground">Receita total de vendas de produtos.</p></CardContent></Card>
@@ -142,11 +142,11 @@ const Dashboard = () => {
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle><AlertTriangle className="h-5 w-5 text-destructive" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.overduePayments}</div>}<p className="text-xs text-muted-foreground">Alunos com mensalidades vencidas.</p><Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setShowOverdueDialog(true)}>Ver e Cobrar</Button></CardContent></Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
             <Card className="lg:col-span-3">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><BarChart2 className="h-5 w-5 text-primary" /> Faturamento Mensal (Matrículas)</CardTitle>
-                <CardDescription>Receita de novas matrículas e renovações nos últimos 6 meses.</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg"><BarChart2 className="h-5 w-5 text-primary" /> Faturamento Mensal (Matrículas)</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Receita de novas matrículas e renovações nos últimos 6 meses.</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? <Skeleton className="h-64 w-full" /> :
@@ -164,8 +164,8 @@ const Dashboard = () => {
             </Card>
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><ShoppingBag className="h-5 w-5 text-primary" /> Top 5 Produtos Vendidos (Mês)</CardTitle>
-                <CardDescription>Produtos que mais geraram receita este mês.</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg"><ShoppingBag className="h-5 w-5 text-primary" /> Top 5 Produtos Vendidos (Mês)</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Produtos que mais geraram receita este mês.</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? <Skeleton className="h-40 w-full" /> :
@@ -183,15 +183,15 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-destructive" /> Alunos em Risco</CardTitle><CardDescription>Alunos que não frequentam há mais de 20 dias.</CardDescription></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base md:text-lg"><TrendingDown className="h-5 w-5 text-destructive" /> Alunos em Risco</CardTitle><CardDescription className="text-xs md:text-sm">Alunos que não frequentam há mais de 20 dias.</CardDescription></CardHeader>
               <CardContent className="flex items-center justify-center h-full text-muted-foreground text-sm min-h-[150px]">
                 <p>Funcionalidade em desenvolvimento...</p>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle>Atividade Recente</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base md:text-lg">Atividade Recente</CardTitle></CardHeader>
               <CardContent>
                 {loading ? (<div className="space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>) :
                   recentActivities.length > 0 ? (

@@ -81,19 +81,19 @@ const Students = () => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
-      <main className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="space-y-2">
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
                 Alunos
               </h1>
-              <p className="text-base text-muted-foreground">
+              <p className="text-sm md:text-base text-muted-foreground">
                 Gerencie os membros da sua academia
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative w-full md:w-72">
+            <div className="flex flex-col-reverse md:flex-row items-stretch gap-3">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nome..."
