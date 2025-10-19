@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Edit, Trash2, CalendarClock, Bell, BellOff, CheckCheck } from "lucide-react";
+import { Edit, Trash2, CalendarClock, Bell, BellOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EditStudentDialog } from "./EditStudentDialog";
@@ -24,7 +24,6 @@ interface Student {
     price: number | null;
     modalities: { name: string } | null;
   }[];
-  check_ins: { count: number }[];
 }
 
 interface StudentsTableProps {
@@ -97,7 +96,6 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                   <TableHead>Nome</TableHead>
                   <TableHead>Modalidades e Preços</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Check-ins</TableHead>
                   <TableHead className="text-center">Automação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -110,7 +108,6 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
                   const status = getEnrollmentStatus(latestEnrollment?.expiry_date || null);
                   const isAutomationActive = status.daysRemaining !== null && status.daysRemaining <= 10 && status.daysRemaining >= 1;
-                  const checkInCount = student.check_ins[0]?.count || 0;
 
                   return (
                     <TableRow key={student.id}>
@@ -133,12 +130,6 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                       </TableCell>
                       <TableCell>
                         <Badge variant={status.variant}>{status.text}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center font-medium">
-                        <div className="flex items-center justify-center gap-2">
-                          <CheckCheck className="h-4 w-4 text-muted-foreground" />
-                          <span>{checkInCount}</span>
-                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <Tooltip>

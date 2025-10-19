@@ -1,32 +1,52 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
-// Função para enviar MENSAGENS DE TEMPLATE
-async function sendTwilioTemplateMessage(to: string, templateSid: string, contentVariables: object, twilioConfig: any) {
+// --- Funções Auxiliares do Twilio ---
+
+// Envia uma mensagem de texto simples (usada para menus, erros, etc.)
+async function sendTwilioTextMessage(to, body, twilioConfig) {
     const { twilioAccountSid, twilioAuthToken, twilioWhatsAppFrom } = twilioConfig;
     const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
-
     const data = new URLSearchParams({
         To: `whatsapp:${to}`,
         From: `whatsapp:${twilioWhatsAppFrom}`,
-        ContentSid: templateSid,
-        ContentVariables: JSON.stringify(contentVariables),
+        Body: body
     });
-
     const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
             'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: data,
+        body: data
     });
+    if (!response.ok) {
+        console.error(`Falha ao enviar mensagem de texto para ${to}:`, await response.text());
+    }
+}
 
+// Envia uma MENSAGEM DE TEMPLATE (usada para notificações, como confirmação de check-in)
+async function sendTwilioTemplateMessage(to, templateSid, contentVariables, twilioConfig) {
+    const { twilioAccountSid, twilioAuthToken, twilioWhatsAppFrom } = twilioConfig;
+    const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
+    const data = new URLSearchParams({
+        To: `whatsapp:${to}`,
+        From: `whatsapp:${twilioWhatsAppFrom}`,
+        ContentSid: templateSid,
+        ContentVariables: JSON.stringify(contentVariables)
+    });
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: data
+    });
     if (!response.ok) {
         const errorBody = await response.text();
         console.error(`Falha ao enviar template para ${to}:`, errorBody);
@@ -34,24 +54,9 @@ async function sendTwilioTemplateMessage(to: string, templateSid: string, conten
     }
 }
 
-// Função para mensagens de texto simples (para erros e instruções)
-async function sendTwilioTextMessage(to: string, body: string, twilioConfig: any) {
-    const { twilioAccountSid, twilioAuthToken, twilioWhatsAppFrom } = twilioConfig;
-    const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
-    const data = new URLSearchParams({
-        To: `whatsapp:${to}`,
-        From: `whatsapp:${twilioWhatsAppFrom}`,
-        Body: body,
-    });
+// --- Lógica Principal do Webhook ---
 
-    await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: data,
-    });
-}
-
-serve(async (req) => {
+Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
@@ -60,145 +65,136 @@ serve(async (req) => {
         twilioAccountSid: Deno.env.get('TWILIO_ACCOUNT_SID'),
         twilioAuthToken: Deno.env.get('TWILIO_AUTH_TOKEN'),
         twilioWhatsAppFrom: Deno.env.get('TWILIO_WHATSAPP_FROM'),
-        templateSidConfirmation: Deno.env.get('TWILIO_TEMPLATE_SID_CONFIRMATION'),
-        templateSidSuccess: Deno.env.get('TWILIO_TEMPLATE_SID_SUCCESS'),
+        templateSidConfirmation: Deno.env.get('TWILIO_TEMPLATE_SID_CONFIRMATION'), // Template para "Confirma o check-in..."
+        templateSidSuccess: Deno.env.get('TWILIO_TEMPLATE_SID_SUCCESS') // Template para "Check-in realizado..."
     };
+
     const params = new URLSearchParams(await req.text());
     const from = params.get('From')?.replace('whatsapp:', '');
+    const body = params.get('Body')?.toLowerCase().trim();
 
     try {
-        const supabaseAdmin = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        );
+        const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
-        if (Object.values(twilioConfig).some(v => !v)) {
+        if (Object.values(twilioConfig).some((v) => !v)) {
             throw new Error("Uma ou mais variáveis de ambiente do Twilio não estão configuradas.");
         }
-
-        const body = params.get('Body')?.trim();
 
         if (!from || !body) {
             return new Response('Parâmetros inválidos.', { status: 400 });
         }
 
-        const { data: students, error: studentError } = await supabaseAdmin
+        const { data: student, error: studentError } = await supabaseAdmin
             .from('students')
-            .select('id, name, organization:organizations ( id, name, address )')
-            .eq('phone_number', from);
+            .select('id, name, organization_id')
+            .eq('phone_number', from)
+            .single();
 
-        if (studentError || !students || students.length === 0) {
+        if (studentError || !student) {
             await sendTwilioTextMessage(from, "Olá! Não encontramos seu cadastro em nosso sistema. Por favor, verifique se o número está correto ou contate a recepção.", twilioConfig);
             return new Response('Aluno não encontrado.', { status: 404 });
         }
 
-        // NOVO: Função auxiliar para verificar check-in existente
-        const checkExistingCheckIn = async (studentId: string, organizationId: string) => {
+        let responseMessage = '';
+        const menuText = `Olá, ${student.name}! Sou seu assistente virtual. Como posso te ajudar hoje?\n\n1. *Ver modalidades e preços*\n2. *Meus agendamentos*\n3. *Fazer check-in*\n\nResponda com o número da opção desejada.`;
+
+        // --- Roteamento das Opções do Menu ---
+
+        if (body.includes('olá') || body.includes('oi') || body.includes('menu')) {
+            responseMessage = menuText;
+        } else if (body.startsWith('1')) {
+            // Lógica para buscar modalidades
+            const { data: modalities } = await supabaseAdmin
+                .from('modalities')
+                .select('name, price')
+                .eq('organization_id', student.organization_id);
+
+            if (modalities && modalities.length > 0) {
+                responseMessage = 'Nossas modalidades e preços são:\n\n' +
+                    modalities.map(m => `*${m.name}*: R$ ${m.price ? m.price.toFixed(2).replace('.', ',') : 'N/A'}`).join('\n');
+            } else {
+                responseMessage = 'Nenhuma modalidade encontrada no momento.';
+            }
+        } else if (body.startsWith('2')) {
+            // Lógica para buscar agendamentos futuros
+            const today = new Date().toISOString();
+            const { data: appointments } = await supabaseAdmin
+                .from('appointments')
+                .select('start_time, modalities(name)')
+                .eq('student_id', student.id)
+                .gte('start_time', today)
+                .order('start_time')
+                .limit(5);
+
+            if (appointments && appointments.length > 0) {
+                responseMessage = 'Seus próximos agendamentos são:\n\n' +
+                    appointments.map(a => {
+                        const date = new Date(a.start_time);
+                        const formattedDate = `${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                        return `*${formattedDate}* - ${a.modalities?.name || 'Aula Particular'}`;
+                    }).join('\n');
+            } else {
+                responseMessage = 'Você não possui agendamentos futuros.';
+            }
+        } else if (body.startsWith('3') || body === 'check-in') {
+            // Lógica de Check-in (integrada do seu script)
+            const { data: org } = await supabaseAdmin.from('organizations').select('name').eq('id', student.organization_id).single();
+            if (!org) throw new Error("Organização não encontrada para o check-in.");
+
+            await sendTwilioTemplateMessage(from, twilioConfig.templateSidConfirmation, { '1': student.name, '2': org.name }, twilioConfig);
+
+            // Retorna uma resposta vazia para o Twilio, pois a mensagem já foi enviada
+            return new Response('<Response></Response>', { headers: { 'Content-Type': 'text/xml' } });
+
+        } else if (body === 'sim') {
+            // Lógica de Confirmação de Check-in
+            const { data: org } = await supabaseAdmin.from('organizations').select('id, name').eq('id', student.organization_id).single();
+            if (!org) throw new Error("Organização não encontrada para confirmar o check-in.");
+
+            // Verifica check-in existente
             const today = new Date();
             const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-            const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+            const { data: existingCheckIn, error: checkInError } = await supabaseAdmin.from('appointments').select('id').eq('student_id', student.id).eq('organization_id', org.id).gte('start_time', startOfDay).limit(1).single();
 
-            const { data, error } = await supabaseAdmin
-                .from('check_ins')
-                .select('id')
-                .eq('student_id', studentId)
-                .eq('organization_id', organizationId)
-                .gte('checked_in_at', startOfDay)
-                .lt('checked_in_at', endOfDay)
-                .single(); // .single() para otimizar, só precisamos saber se existe um
+            if (checkInError && checkInError.code !== 'PGRST116') throw checkInError;
 
-            if (error && error.code !== 'PGRST116') { // PGRST116 é o erro para "nenhuma linha encontrada", o que é bom para nós
-                throw error;
-            }
-            return data; // Retorna o check-in se existir, ou null se não
-        };
-
-
-        if (body.toLowerCase() === 'check-in') {
-            if (students.length === 1) {
-                const student = students[0];
-                const orgName = student.organization?.name;
-
-                if (!student.name || !orgName) {
-                    await sendTwilioTextMessage(from, "Desculpe, não conseguimos carregar os dados da sua academia. Por favor, contate o suporte.", twilioConfig);
-                    throw new Error(`Dados ausentes para o aluno ID ${student.id}: nome=${student.name}, org=${orgName}`);
-                }
-
-                await sendTwilioTemplateMessage(from, twilioConfig.templateSidConfirmation!, { '1': student.name, '2': orgName }, twilioConfig);
-
-            } else {
-                let message = "Olá! Vimos que você está matriculado em mais de uma unidade. Em qual delas você gostaria de fazer o check-in?\n\n";
-                students.forEach((s, index) => {
-                    message += `${index + 1}. ${s.organization?.name}\n`;
-                });
-                message += "\nResponda com o número da opção desejada.";
-                await sendTwilioTextMessage(from, message, twilioConfig);
-            }
-        } else if (body.toLowerCase() === 'sim' && students.length === 1) {
-            const student = students[0];
-
-            if (!student.organization?.id || !student.organization?.name) {
-                throw new Error(`ID ou nome da organização ausente para o aluno ${student.id} ao confirmar check-in.`);
-            }
-
-            // NOVO: Verifica se já existe um check-in antes de inserir
-            const existingCheckIn = await checkExistingCheckIn(student.id, student.organization.id);
             if (existingCheckIn) {
-                await sendTwilioTextMessage(from, `Você já realizou um check-in na unidade ${student.organization.name} hoje.`, twilioConfig);
-                return new Response('ok', { headers: corsHeaders });
-            }
-
-            const { error: checkinError } = await supabaseAdmin.from('check_ins').insert({
-                student_id: student.id,
-                organization_id: student.organization.id,
-            });
-
-            if (checkinError) throw checkinError;
-
-            await sendTwilioTemplateMessage(from, twilioConfig.templateSidSuccess!, { '1': student.organization.name }, twilioConfig);
-
-        } else if (!isNaN(parseInt(body, 10)) && students.length > 1) {
-            const choiceIndex = parseInt(body, 10) - 1;
-            if (choiceIndex >= 0 && choiceIndex < students.length) {
-                const chosenStudent = students[choiceIndex];
-
-                if (!chosenStudent.organization?.id || !chosenStudent.organization?.name) {
-                    throw new Error(`ID ou nome da organização ausente para o aluno ${chosenStudent.id} na escolha múltipla.`);
-                }
-
-                // NOVO: Verifica se já existe um check-in antes de inserir
-                const existingCheckIn = await checkExistingCheckIn(chosenStudent.id, chosenStudent.organization.id);
-                if (existingCheckIn) {
-                    await sendTwilioTextMessage(from, `Você já realizou um check-in na unidade ${chosenStudent.organization.name} hoje.`, twilioConfig);
-                    return new Response('ok', { headers: corsHeaders });
-                }
-
-                const { error: checkinError } = await supabaseAdmin.from('check_ins').insert({
-                    student_id: chosenStudent.id,
-                    organization_id: chosenStudent.organization.id,
-                });
-
-                if (checkinError) throw checkinError;
-
-                await sendTwilioTemplateMessage(from, twilioConfig.templateSidSuccess!, { '1': chosenStudent.organization.name }, twilioConfig);
+                responseMessage = `Você já realizou um check-in na unidade ${org.name} hoje.`;
             } else {
-                await sendTwilioTextMessage(from, "Opção inválida. Por favor, responda com o número correspondente à unidade.", twilioConfig);
+                // Simula um check-in criando um agendamento para agora.
+                const now = new Date();
+                const { error: insertError } = await supabaseAdmin.from('appointments').insert({
+                    student_id: student.id,
+                    organization_id: org.id,
+                    start_time: now.toISOString(),
+                    end_time: new Date(now.getTime() + 60 * 60 * 1000).toISOString(), // Adiciona 1h de duração
+                    status: 'completed',
+                    notes: 'Check-in via WhatsApp'
+                });
+                if (insertError) throw insertError;
+
+                await sendTwilioTemplateMessage(from, twilioConfig.templateSidSuccess, { '1': org.name }, twilioConfig);
+                return new Response('<Response></Response>', { headers: { 'Content-Type': 'text/xml' } });
             }
-        } else if (body.toLowerCase() === 'não') {
-            await sendTwilioTextMessage(from, "Ok, check-in cancelado.", twilioConfig);
+        } else if (body === 'não') {
+            responseMessage = "Ok, check-in cancelado.";
         } else {
-            await sendTwilioTextMessage(from, 'Olá! Para iniciar, envie "check-in".', twilioConfig);
+            responseMessage = `Desculpe, não entendi. Para ver as opções, envie "menu".`;
         }
 
+        // Envia a resposta final como mensagem de texto
+        await sendTwilioTextMessage(from, responseMessage, twilioConfig);
+
         return new Response('ok', { headers: corsHeaders });
+
     } catch (error) {
-        console.error(error.message);
+        console.error("Erro geral no webhook:", error.message);
         if (from && twilioConfig.twilioAccountSid) {
-            await sendTwilioTextMessage(from, "Ocorreu um erro inesperado ao processar sua solicitação. Tente novamente ou contate o suporte.", twilioConfig);
+            await sendTwilioTextMessage(from, "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.", twilioConfig);
         }
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
+            status: 500
         });
     }
 });

@@ -29,14 +29,13 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
     birthDate: "",
     phoneNumber: "",
     modalityId: "",
-    enrollmentPrice: "", // Novo campo para o preço
+    enrollmentPrice: "",
     expiryDate: "",
   });
 
   useEffect(() => {
     if (open) {
       loadModalities();
-      // Define a data de vencimento padrão para 30 dias a partir de hoje
       const today = new Date();
       today.setDate(today.getDate() + 30);
       const formattedDefaultDate = today.toISOString().split('T')[0];
@@ -115,7 +114,6 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          {/* ... campos de nome, telefone, cpf, data de nascimento ... */}
           <div className="space-y-2">
             <Label htmlFor="name">Nome *</Label>
             <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
@@ -135,7 +133,6 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
               <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
             </div>
           </div>
-
           <div className="space-y-2 pt-4 border-t">
             <Label className="font-semibold">Matrícula Inicial (Opcional)</Label>
             <Select value={formData.modalityId} onValueChange={handleModalityChange} disabled={loading}>
