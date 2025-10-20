@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AddStudentDialogProps {
   open: boolean;
@@ -40,6 +41,9 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
       today.setDate(today.getDate() + 30);
       const formattedDefaultDate = today.toISOString().split('T')[0];
       setFormData(prev => ({ ...prev, expiryDate: formattedDefaultDate }));
+    } else {
+      // Limpa o formulário quando o modal é fechado
+      setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "", modalityId: "", enrollmentPrice: "", expiryDate: "" });
     }
   }, [open]);
 
@@ -95,7 +99,6 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
       toast.success("Aluno adicionado com sucesso");
       onSuccess();
       onOpenChange(false);
-      setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "", modalityId: "", enrollmentPrice: "", expiryDate: "" });
     } catch (error: any) {
       toast.error(error.message || "Falha ao adicionar aluno");
       console.error(error);
@@ -106,57 +109,64 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>Adicionar Novo Aluno</DialogTitle>
           <DialogDescription>
             Insira as informações do aluno e os detalhes da matrícula.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
-            <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phoneNumber">Telefone (WhatsApp)</Label>
-            <Input id="phoneNumber" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+5513999998888" disabled={loading} />
-            <p className="text-xs text-muted-foreground">Formato: +55 (DDD) (Número)</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+        <ScrollArea className="max-h-[80vh] overflow-y-auto">
+          <form onSubmit={handleSubmit} className="space-y-4 px-6 pb-6">
             <div className="space-y-2">
-              <Label htmlFor="cpf">CPF</Label>
-              <Input id="cpf" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} placeholder="000.000.000-00" disabled={loading} />
+              <Label htmlFor="name">Nome *</Label>
+              <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="birthDate">Nascimento</Label>
-              <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
+              <Label htmlFor="phoneNumber">Telefone (WhatsApp)</Label>
+              <Input id="phoneNumber" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="+5513999998888" disabled={loading} />
+              <p className="text-xs text-muted-foreground">Formato: +55 (DDD) (Número)</p>
             </div>
-          </div>
-          <div className="space-y-2 pt-4 border-t">
-            <Label className="font-semibold">Matrícula Inicial (Opcional)</Label>
-            <Select value={formData.modalityId} onValueChange={handleModalityChange} disabled={loading}>
-              <SelectTrigger><SelectValue placeholder="Selecione uma modalidade" /></SelectTrigger>
-              <SelectContent>
-                {modalities.map((modality) => (<SelectItem key={modality.id} value={modality.id}>{modality.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="enrollmentPrice">Valor (R$)</Label>
-              <Input id="enrollmentPrice" type="number" step="0.01" min="0" placeholder="Ex: 99,90" value={formData.enrollmentPrice} onChange={(e) => setFormData({ ...formData, enrollmentPrice: e.target.value })} disabled={loading || !formData.modalityId} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input id="cpf" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} placeholder="000.000.000-00" disabled={loading} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="birthDate">Nascimento</Label>
+                <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="expiryDate">Vencimento</Label>
-              <Input id="expiryDate" type="date" value={formData.expiryDate} onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })} disabled={loading || !formData.modalityId} />
+
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="font-semibold">Matrícula Inicial (Opcional)</Label>
+              <Select value={formData.modalityId} onValueChange={handleModalityChange} disabled={loading}>
+                <SelectTrigger><SelectValue placeholder="Selecione uma modalidade" /></SelectTrigger>
+                <SelectContent>
+                  {modalities.map((modality) => (<SelectItem key={modality.id} value={modality.id}>{modality.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>{loading ? "Adicionando..." : "Adicionar Aluno"}</Button>
-          </div>
-        </form>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="enrollmentPrice">Valor (R$)</Label>
+                <Input id="enrollmentPrice" type="number" step="0.01" min="0" placeholder="Ex: 99,90" value={formData.enrollmentPrice} onChange={(e) => setFormData({ ...formData, enrollmentPrice: e.target.value })} disabled={loading || !formData.modalityId} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">Vencimento</Label>
+                <Input id="expiryDate" type="date" value={formData.expiryDate} onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })} disabled={loading || !formData.modalityId} />
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Adicionando..." : "Adicionar Aluno"}
+              </Button>
+            </div>
+          </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

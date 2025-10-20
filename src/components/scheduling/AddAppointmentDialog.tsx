@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Student { id: string; name: string; }
 interface Modality { id: string; name: string; }
@@ -115,56 +116,59 @@ export const AddAppointmentDialog = ({ open, onOpenChange, onSuccess, organizati
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-md p-0">
+                <DialogHeader className="p-6 pb-4">
                     <DialogTitle>{initialData?.id ? 'Editar' : 'Novo'} Agendamento</DialogTitle>
                     <DialogDescription>
-                        Preencha os detalhes do agendamento para a data {selectedDate.toLocaleDateString('pt-BR')}.
+                        Para a data de {selectedDate.toLocaleDateString('pt-BR')}.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                        <Label>Aluno *</Label>
-                        <Select value={formData.student_id} onValueChange={(v) => setFormData({ ...formData, student_id: v })} required disabled={loading}>
-                            <SelectTrigger><SelectValue placeholder="Selecione um aluno" /></SelectTrigger>
-                            <SelectContent>
-                                {students.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Modalidade (Opcional)</Label>
-                        <Select
-                            value={formData.modality_id || "none"}
-                            onValueChange={(v) => setFormData({ ...formData, modality_id: v === "none" ? null : v })}
-                            disabled={loading}
-                        >
-                            <SelectTrigger><SelectValue placeholder="Selecione uma modalidade" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Nenhuma</SelectItem>
-                                {modalities.map((m) => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                <ScrollArea className="max-h-[80vh] overflow-y-auto">
+                    <form onSubmit={handleSubmit} className="space-y-4 px-6 pb-6">
                         <div className="space-y-2">
-                            <Label htmlFor="start_time">Início *</Label>
-                            <Input id="start_time" type="time" value={formData.start_time} onChange={(e) => setFormData({ ...formData, start_time: e.target.value })} required disabled={loading} />
+                            <Label>Aluno *</Label>
+                            <Select value={formData.student_id} onValueChange={(v) => setFormData({ ...formData, student_id: v })} required disabled={loading}>
+                                <SelectTrigger><SelectValue placeholder="Selecione um aluno" /></SelectTrigger>
+                                <SelectContent>
+                                    {students.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="end_time">Fim *</Label>
-                            <Input id="end_time" type="time" value={formData.end_time} onChange={(e) => setFormData({ ...formData, end_time: e.target.value })} required disabled={loading} />
+                            <Label>Modalidade (Opcional)</Label>
+                            <Select
+                                value={formData.modality_id || "none"}
+                                onValueChange={(v) => setFormData({ ...formData, modality_id: v === "none" ? null : v })}
+                                disabled={loading}
+                            >
+                                <SelectTrigger><SelectValue placeholder="Selecione uma modalidade" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Nenhuma</SelectItem>
+                                    {modalities.map((m) => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                </SelectContent>
+                            </Select>
                         </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="notes">Observações</Label>
-                        <Textarea id="notes" value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} disabled={loading} placeholder="Alguma observação sobre este agendamento?" />
-                    </div>
-                    <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
-                        <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar Agendamento"}</Button>
-                    </div>
-                </form>
+                        {/* OTIMIZAÇÃO MOBILE APLICADA AQUI */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="start_time">Início *</Label>
+                                <Input id="start_time" type="time" value={formData.start_time} onChange={(e) => setFormData({ ...formData, start_time: e.target.value })} required disabled={loading} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="end_time">Fim *</Label>
+                                <Input id="end_time" type="time" value={formData.end_time} onChange={(e) => setFormData({ ...formData, end_time: e.target.value })} required disabled={loading} />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="notes">Observações</Label>
+                            <Textarea id="notes" value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} disabled={loading} placeholder="Alguma observação sobre este agendamento?" />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
+                            <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
+                        </div>
+                    </form>
+                </ScrollArea>
             </DialogContent>
         </Dialog>
     );
