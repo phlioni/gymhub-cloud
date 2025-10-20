@@ -10,11 +10,9 @@ Deno.serve(async (req) => {
         });
     }
     try {
-        // --- ALTERAÇÃO 1: Carrega todos os segredos necessários ---
         const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
         const twilioWhatsAppFrom = Deno.env.get('TWILIO_WHATSAPP_FROM');
-        // Mapeia os dias aos seus respectivos SIDs de template
         const templateSids = {
             10: Deno.env.get('TWILIO_TEMPLATE_SID_10_DAYS'),
             6: Deno.env.get('TWILIO_TEMPLATE_SID_6_DAYS'),
@@ -44,18 +42,15 @@ Deno.serve(async (req) => {
                 // @ts-ignore
                 const organizationName = enrollment.modalities?.organizations?.name;
                 const to = student?.phone_number;
-                // --- ALTERAÇÃO 2: Seleciona o SID do template dinamicamente ---
                 const templateSidForDay = templateSids[days];
                 if (to && student?.name && organizationName && templateSidForDay) {
-                    // --- ALTERAÇÃO 3: Monta a mensagem usando o template e variáveis ---
-                    // O parâmetro 'Body' é removido, e 'ContentSid' e 'ContentVariables' são usados
                     const messageData = new URLSearchParams({
                         To: `whatsapp:${to}`,
                         From: `whatsapp:${twilioWhatsAppFrom.replace('whatsapp:', '')}`,
                         ContentSid: templateSidForDay,
                         ContentVariables: JSON.stringify({
                             '1': student.name,
-                            '2': days.toString()
+                            '2': organizationName // <-- CORREÇÃO APLICADA AQUI
                         })
                     });
                     const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`, {
