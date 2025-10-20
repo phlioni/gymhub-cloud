@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, DollarSign, AlertTriangle, BarChart2, ShoppingBag, UserPlus, ShoppingCart, TrendingDown, TrendingUp } from "lucide-react";
+import { Users, Calendar, DollarSign, AlertTriangle, BarChart2, ShoppingBag, UserPlus, ShoppingCart, TrendingDown, TrendingUp, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ExpiringEnrollmentsDialog } from "@/components/dashboard/ExpiringEnrollmentsDialog";
@@ -38,6 +38,7 @@ const Dashboard = () => {
     monthlyEnrollmentRevenue: 0,
     annualEnrollmentRevenue: 0,
     enrollmentRevenueChange: 0,
+    checkInsToday: 0,
   });
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [enrollmentChartData, setEnrollmentChartData] = useState<MonthlyRevenue[]>([]);
@@ -56,6 +57,8 @@ const Dashboard = () => {
       const tenDaysFromNow = new Date(today);
       tenDaysFromNow.setDate(today.getDate() + 10);
       const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const startOfToday = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+
 
       const [
         { count: totalStudents },
@@ -65,7 +68,8 @@ const Dashboard = () => {
         { data: topProductsData, error: rpcErrorTopProducts },
         { data: recentSales },
         { data: recentEnrollments },
-        { data: enrollmentRevenueStats, error: rpcErrorEnrollments }
+        { data: enrollmentRevenueStats, error: rpcErrorEnrollments },
+        { count: checkInsToday },
       ] = await Promise.all([
         supabase.from('students').select('*', { count: 'exact', head: true }),
         supabase.from('enrollments').select('*', { count: 'exact', head: true }).lte('expiry_date', tenDaysFromNow.toISOString().split('T')[0]).gte('expiry_date', today.toISOString().split('T')[0]),
@@ -74,7 +78,8 @@ const Dashboard = () => {
         supabase.rpc('get_top_products_this_month'),
         supabase.from('sales').select('students(name), products(name), total_price, sale_date').order('sale_date', { ascending: false }).limit(3),
         supabase.from('enrollments').select('students(name), modalities(name), created_at').order('created_at', { ascending: false }).limit(2),
-        supabase.rpc('get_enrollment_revenue_stats')
+        supabase.rpc('get_enrollment_revenue_stats'),
+        supabase.from('check_ins').select('*', { count: 'exact', head: true }).gte('checked_in_at', startOfToday),
       ]);
 
       if (rpcErrorTopProducts) throw rpcErrorTopProducts;
@@ -99,6 +104,7 @@ const Dashboard = () => {
         monthlyEnrollmentRevenue: current_month_total || 0,
         annualEnrollmentRevenue: annual_total || 0,
         enrollmentRevenueChange,
+        checkInsToday: checkInsToday || 0,
       });
 
       setEnrollmentChartData(chart_data || []);
@@ -133,10 +139,20 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento Anual (Matrículas)</CardTitle><TrendingUp className="h-5 w-5 text-blue-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(stats.annualEnrollmentRevenue)}</div>}<p className="text-xs text-muted-foreground">Receita acumulada no ano corrente.</p></CardContent></Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento do Mês (Matrículas)</CardTitle><DollarSign className="h-5 w-5 text-green-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <> <div className="text-2xl font-bold">{formatCurrency(stats.monthlyEnrollmentRevenue)}</div> <p className={cn("text-xs", stats.enrollmentRevenueChange >= 0 ? "text-green-600" : "text-red-600")}> {stats.enrollmentRevenueChange >= 0 ? '+' : ''}{stats.enrollmentRevenueChange.toFixed(1)}% vs. mês anterior </p> </>}</CardContent></Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento do Mês (Produtos)</CardTitle><ShoppingBag className="h-5 w-5 text-green-500" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-3/4" /> : <div className="text-2xl font-bold">{formatCurrency(stats.monthlyProductRevenue)}</div>}<p className="text-xs text-muted-foreground">Receita total de vendas de produtos.</p></CardContent></Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Check-ins Hoje</CardTitle>
+                <CheckCheck className="h-5 w-5 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.checkInsToday}</div>}
+                <p className="text-xs text-muted-foreground">Alunos que treinaram hoje.</p>
+              </CardContent>
+            </Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total de Alunos Ativos</CardTitle><Users className="h-5 w-5 text-primary" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.totalStudents}</div>}<p className="text-xs text-muted-foreground">Alunos com matrícula válida.</p></CardContent></Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Matrículas Vencendo</CardTitle><Calendar className="h-5 w-5 text-accent" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.expiringIn10Days}</div>}<p className="text-xs text-muted-foreground">Nos próximos 10 dias.</p><Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setShowExpiringDialog(true)}>Ver Lista</Button></CardContent></Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle><AlertTriangle className="h-5 w-5 text-destructive" /></CardHeader><CardContent>{loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.overduePayments}</div>}<p className="text-xs text-muted-foreground">Alunos com mensalidades vencidas.</p><Button variant="link" size="sm" className="p-0 h-auto text-destructive" onClick={() => setShowOverdueDialog(true)}>Ver e Cobrar</Button></CardContent></Card>

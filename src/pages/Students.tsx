@@ -3,11 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, MessageCircle } from "lucide-react";
 import { StudentsTable } from "@/components/students/StudentsTable";
 import { AddStudentDialog } from "@/components/students/AddStudentDialog";
 import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { WhatsappInfoDialog } from "@/components/students/WhatsappInfoDialog"; // Importe o novo modal
 
 const Students = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Students = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showWhatsappInfo, setShowWhatsappInfo] = useState(false); // Estado para controlar o modal de informação
 
   useEffect(() => {
     const nameParam = searchParams.get('name');
@@ -101,6 +103,11 @@ const Students = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              {/* Botão modificado para abrir o modal */}
+              <Button variant="outline" className="h-11 px-4" onClick={() => setShowWhatsappInfo(true)}>
+                <MessageCircle className="h-5 w-5 md:mr-2" />
+                <span className="hidden md:inline font-medium">Link do Aluno</span>
+              </Button>
               <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all hidden md:inline-flex">
                 <Plus className="h-5 w-5 md:mr-2" />
                 <span className="hidden md:inline font-medium">Adicionar Aluno</span>
@@ -120,6 +127,13 @@ const Students = () => {
             organizationId={organizationId}
             onSuccess={loadStudents}
           />
+
+          {/* Renderiza o novo modal informativo */}
+          <WhatsappInfoDialog
+            open={showWhatsappInfo}
+            onOpenChange={setShowWhatsappInfo}
+          />
+
         </div>
         <FloatingActionButton onClick={() => setShowAddDialog(true)} />
       </main>

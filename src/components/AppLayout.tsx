@@ -13,6 +13,8 @@ import {
     Package,
     Settings,
     Dumbbell,
+    CheckCheck,
+    Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -29,6 +31,8 @@ const navigation = [
     { name: "Alunos", href: "/students", icon: Users },
     { name: "Modalidades", href: "/modalities", icon: GraduationCap },
     { name: "Produtos", href: "/products", icon: Package },
+    { name: "Agendamentos", href: "/scheduling", icon: Calendar },
+    { name: "Check-ins", href: "/check-ins", icon: CheckCheck },
     { name: "Configurações", href: "/settings", icon: Settings },
 ];
 

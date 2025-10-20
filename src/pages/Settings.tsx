@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, Info, CheckCircle, Smartphone, Clock } from "lucide-react";
+import { Upload, Info, CheckCircle, Smartphone, Clock, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -22,6 +23,10 @@ const Settings = () => {
     phoneNumber: "",
     businessHours: "",
     logoUrl: "",
+  });
+  const [passwordData, setPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,7 +81,7 @@ const Settings = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organizationId) {
       toast.error("ID da organização não encontrado.");
@@ -100,23 +105,46 @@ const Settings = () => {
     }
   };
 
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("As novas senhas não coincidem.");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      toast.error("A nova senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword });
+      if (error) throw error;
+      toast.success("Senha alterada com sucesso!");
+      setPasswordData({ newPassword: "", confirmPassword: "" });
+    } catch (error: any) {
+      toast.error(error.message || "Falha ao alterar a senha.");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   return (
-    // CORREÇÃO AQUI: A classe `flex-1` é a chave para fazer o <main> crescer e ocupar o espaço
-    <main className="flex-1 p-8">
+    <main className="flex-1 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6 w-full">
         <div>
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Configurações
           </h1>
-          <p className="text-muted-foreground">
-            Gerencie as informações e automações da sua organização
+          <p className="text-muted-foreground text-sm md:text-base">
+            Gerencie as informações e automações da sua organização.
           </p>
         </div>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="details">Detalhes da Organização</TabsTrigger>
-            <TabsTrigger value="automation">Automação de Lembretes</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="automation">Automação</TabsTrigger>
+            <TabsTrigger value="security">Segurança</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details">
@@ -129,7 +157,7 @@ const Settings = () => {
                   <CardDescription>Atualize as informações que seus alunos e administradores veem.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleDetailsSubmit} className="space-y-6">
                     <div className="space-y-2">
                       <Label>Logo</Label>
                       <div className="flex items-center gap-4">
@@ -184,6 +212,50 @@ const Settings = () => {
                     Sua conta está configurada para enviar mensagens através do parceiro oficial Twilio. Todas as mensagens são enviadas usando modelos pré-aprovados pela Meta para garantir a entrega.
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security">
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle>Alterar Senha</CardTitle>
+                <CardDescription>Altere sua senha de acesso à plataforma.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordUpdate} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">Nova Senha</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      minLength={6}
+                      required
+                      disabled={savingPassword}
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      minLength={6}
+                      required
+                      disabled={savingPassword}
+                    />
+                  </div>
+                  <div className="flex justify-end pt-4">
+                    <Button type="submit" disabled={savingPassword}>
+                      <Lock className="h-4 w-4 mr-2" />
+                      {savingPassword ? "Salvando..." : "Salvar Nova Senha"}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>
