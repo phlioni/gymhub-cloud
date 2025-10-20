@@ -1,139 +1,118 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from 'date-fns';
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Search, CheckCircle } from "lucide-react";
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Search } from "lucide-react";
 
 interface CheckIn {
     id: string;
     checked_in_at: string;
     students: {
         name: string;
-    } | null;
+        phone_number: string | null;
+    };
 }
 
-const CheckIns = () => {
+const Checkins = () => {
     const [loading, setLoading] = useState(true);
-    const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+    const [checkins, setCheckins] = useState<CheckIn[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
     useEffect(() => {
-        loadCheckIns();
-    }, [selectedDate]);
+        loadCheckins();
+    }, []);
 
-    const loadCheckIns = async () => {
+    const loadCheckins = async () => {
         setLoading(true);
         try {
-            // CORREÇÃO: Lógica de data mais robusta para lidar com fusos horários
-            const startDate = `${selectedDate}T00:00:00`;
-            const endDate = `${selectedDate}T23:59:59`;
-
             const { data, error } = await supabase
                 .from('check_ins')
                 .select(`
-                    id,
-                    checked_in_at,
-                    students ( name )
-                `)
-                .gte('checked_in_at', startDate)
-                .lte('checked_in_at', endDate)
-                .order('checked_in_at', { ascending: false });
+          id,
+          checked_in_at,
+          students ( name, phone_number )
+        `)
+                .order('checked_in_at', { ascending: false })
+                .limit(100); // Limita aos 100 mais recentes
 
             if (error) throw error;
-            setCheckIns(data || []);
+            setCheckins(data || []);
         } catch (error: any) {
-            console.error("Falha ao carregar check-ins:", error);
+            toast.error("Falha ao carregar os check-ins");
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredCheckIns = useMemo(() => {
-        if (!searchTerm) return checkIns;
-        return checkIns.filter(ci =>
-            ci.students?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredCheckins = useMemo(() => {
+        if (!searchTerm) {
+            return checkins;
+        }
+        return checkins.filter(checkin =>
+            checkin.students.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [checkIns, searchTerm]);
+    }, [checkins, searchTerm]);
+
+    const formatDate = (dateString: string) => {
+        const date = parseISO(dateString);
+        return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    };
 
     return (
         <main className="flex-1 p-4 md:p-8">
-            <div className="max-w-4xl mx-auto space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                    <div className="space-y-2">
-                        <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
+            <div className="max-w-7xl mx-auto space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                             Histórico de Check-ins
                         </h1>
-                        <p className="text-sm md:text-base text-muted-foreground">
-                            Visualize quem treinou em um dia específico.
+                        <p className="text-muted-foreground text-sm md:text-base">
+                            Veja os últimos check-ins realizados na sua academia.
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="relative w-full md:w-auto">
-                            <Input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="h-11 bg-background/50"
-                            />
-                        </div>
-                        <div className="relative w-full md:w-72">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por nome..."
-                                className="pl-10 h-11 bg-background/50"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
+                    <div className="relative w-full md:w-72">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar por nome do aluno..."
+                            className="pl-10 h-11"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                 </div>
 
-                <Card>
-                    <CardContent className="p-0">
-                        {loading ? (
-                            <div className="p-6 space-y-2">
-                                <Skeleton className="h-10 w-full" />
-                                <Skeleton className="h-10 w-full" />
-                                <Skeleton className="h-10 w-full" />
-                            </div>
-                        ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Aluno</TableHead>
-                                        <TableHead className="text-right">Horário do Check-in</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredCheckIns.length > 0 ? (
-                                        filteredCheckIns.map(ci => (
-                                            <TableRow key={ci.id}>
-                                                <TableCell className="font-medium">{ci.students?.name || "Aluno não identificado"}</TableCell>
-                                                <TableCell className="text-right text-muted-foreground">
-                                                    {format(new Date(ci.checked_in_at), 'HH:mm:ss', { locale: ptBR })}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={2} className="h-24 text-center">
-                                                Nenhum check-in encontrado para esta data.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        )}
-                    </CardContent>
-                </Card>
+                {loading ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+                    </div>
+                ) : filteredCheckins.length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {filteredCheckins.map((checkin) => (
+                            <Card key={checkin.id}>
+                                <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                                    <div className="p-3 bg-primary/10 rounded-full">
+                                        <CheckCircle className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg">{checkin.students.name}</CardTitle>
+                                        <CardDescription>{formatDate(checkin.checked_in_at)}</CardDescription>
+                                    </div>
+                                </CardHeader>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <Card className="p-12 text-center">
+                        <p className="text-muted-foreground">Nenhum check-in encontrado.</p>
+                    </Card>
+                )}
             </div>
         </main>
     );
 };
 
-export default CheckIns;
+export default Checkins;
