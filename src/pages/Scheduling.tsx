@@ -131,8 +131,9 @@ const Scheduling = () => {
 
                     <Card>
                         <CardContent className="p-2 md:p-4">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                                <div className="lg:col-span-1 flex justify-center">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:items-start">
+                                {/* AJUSTE APLICADO AQUI: Removido 'flex' e 'justify-center' para permitir que o calendário ocupe o espaço */}
+                                <div className="lg:col-span-1">
                                     <Calendar
                                         mode="single"
                                         selected={selectedDate}
@@ -142,9 +143,21 @@ const Scheduling = () => {
                                         locale={ptBR}
                                         modifiers={{ scheduled: daysWithAppointments }}
                                         modifiersStyles={{
+                                            today: {
+                                                backgroundColor: 'hsl(var(--accent) / 0.8)',
+                                                color: 'hsl(var(--accent-foreground))',
+                                            },
+                                            selected: {
+                                                backgroundColor: 'hsl(var(--primary))',
+                                                color: 'hsl(var(--primary-foreground))',
+                                                outline: 'none',
+                                                boxShadow: 'none',
+                                            },
                                             scheduled: {
+                                                '--day-background': 'hsl(var(--primary) / 0.1)',
+                                                backgroundColor: 'var(--day-background)',
                                                 color: 'hsl(var(--primary))',
-                                                fontWeight: 'bold',
+                                                fontWeight: '600'
                                             }
                                         }}
                                     />
@@ -154,8 +167,8 @@ const Scheduling = () => {
                                         <CardTitle className="text-xl md:text-2xl">Horários para {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) || 'a data selecionada'}</CardTitle>
                                         <CardDescription>Clique em um agendamento para editar ou excluir.</CardDescription>
                                     </CardHeader>
-                                    <CardContent>
-                                        {loading ? <Skeleton className="h-40 w-full" /> :
+                                    <CardContent className="h-[350px] overflow-y-auto pr-2">
+                                        {loading ? <Skeleton className="h-full w-full" /> :
                                             appointmentsOnSelectedDay.length > 0 ? (
                                                 <div className="space-y-3">
                                                     {appointmentsOnSelectedDay.map(app => (
@@ -173,7 +186,9 @@ const Scheduling = () => {
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-muted-foreground text-center py-10">Nenhum agendamento para este dia.</p>
+                                                <div className="flex items-center justify-center h-full">
+                                                    <p className="text-muted-foreground text-center">Nenhum agendamento para este dia.</p>
+                                                </div>
                                             )}
                                     </CardContent>
                                 </div>
