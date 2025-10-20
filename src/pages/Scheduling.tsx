@@ -123,7 +123,7 @@ const Scheduling = () => {
                                 Visualize e gerencie os horários dos seus alunos.
                             </p>
                         </div>
-                        <Button onClick={handleAddNew}>
+                        <Button onClick={handleAddNew} className="w-full md:w-auto">
                             <Plus className="h-4 w-4 mr-2" />
                             Novo Agendamento
                         </Button>
@@ -131,14 +131,14 @@ const Scheduling = () => {
 
                     <Card>
                         <CardContent className="p-2 md:p-4">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                                 <div className="lg:col-span-1 flex justify-center">
                                     <Calendar
                                         mode="single"
                                         selected={selectedDate}
                                         onSelect={setSelectedDate}
                                         onMonthChange={setCurrentMonth}
-                                        className="rounded-md border"
+                                        className="rounded-md border w-full"
                                         locale={ptBR}
                                         modifiers={{ scheduled: daysWithAppointments }}
                                         modifiersStyles={{
@@ -151,13 +151,13 @@ const Scheduling = () => {
                                 </div>
                                 <div className="lg:col-span-2">
                                     <CardHeader>
-                                        <CardTitle>Horários para {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) || 'a data selecionada'}</CardTitle>
+                                        <CardTitle className="text-xl md:text-2xl">Horários para {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) || 'a data selecionada'}</CardTitle>
                                         <CardDescription>Clique em um agendamento para editar ou excluir.</CardDescription>
                                     </CardHeader>
                                     <CardContent>
                                         {loading ? <Skeleton className="h-40 w-full" /> :
                                             appointmentsOnSelectedDay.length > 0 ? (
-                                                <div className="space-y-4">
+                                                <div className="space-y-3">
                                                     {appointmentsOnSelectedDay.map(app => (
                                                         <div key={app.id} className="p-3 border rounded-lg flex items-center justify-between hover:bg-muted/50 transition-colors">
                                                             <div>
@@ -165,7 +165,7 @@ const Scheduling = () => {
                                                                 <p>{app.students.name}</p>
                                                                 {app.modalities && <p className="text-sm text-muted-foreground">{app.modalities.name}</p>}
                                                             </div>
-                                                            <div className="flex gap-2">
+                                                            <div className="flex gap-1">
                                                                 <Button variant="ghost" size="icon" onClick={() => handleEdit(app)}><Edit className="h-4 w-4" /></Button>
                                                                 <Button variant="ghost" size="icon" onClick={() => handleDelete(app.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                             </div>
