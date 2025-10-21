@@ -4,7 +4,8 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogDescription // Adicionado DialogDescription
+    DialogDescription,
+    DialogFooter // Importar DialogFooter
 } from "@/components/ui/dialog";
 import {
     AlertDialog,
@@ -53,28 +54,19 @@ interface Modality {
     price: number | null;
 }
 
-// >>> INÍCIO: Função para formatar o número de telefone <<<
+// Função para formatar o número de telefone (mantida)
 const formatPhoneNumber = (phone: string | null | undefined): string | null => {
-    if (!phone) {
-        return null; // Retorna null se a entrada for vazia, nula ou indefinida
-    }
-    // Remove caracteres não numéricos, exceto o '+' inicial se existir
+    if (!phone) { return null; }
     let cleanedNumber = phone.trim().replace(/[^\d+]/g, '');
     if (!cleanedNumber) { return null; }
-    // Se já começa com '+', assume que está formatado (internacional ou +55)
-    if (cleanedNumber.startsWith('+')) {
-        return cleanedNumber;
-    }
-    // Se não começa com '+', remove todos os não-dígitos restantes e adiciona +55
+    if (cleanedNumber.startsWith('+')) { return cleanedNumber; }
     const digitsOnly = cleanedNumber.replace(/\D/g, '');
     if (!digitsOnly) { return null; }
     return `+55${digitsOnly}`;
 };
-// >>> FIM: Função para formatar o número de telefone <<<
-
 
 export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: EditStudentDialogProps) => {
-    const [loading, setLoading] = useState(false);
+    const [loadingData, setLoadingData] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [allModalities, setAllModalities] = useState<Modality[]>([]);
     const [studentEnrollments, setStudentEnrollments] = useState<any[]>([]);
@@ -82,6 +74,7 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
     const [newEnrollment, setNewEnrollment] = useState({ modalityId: "", price: "", expiryDate: "" });
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [enrollmentToDelete, setEnrollmentToDelete] = useState<string | null>(null);
+    const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
         if (open && student) {
@@ -93,49 +86,51 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
             });
             setStudentEnrollments(student.enrollments || []);
             loadModalities();
+            setHasChanges(false);
         } else if (!open) {
-            // Limpa o estado quando o modal é fechado
             setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "" });
             setStudentEnrollments([]);
             setNewEnrollment({ modalityId: "", price: "", expiryDate: "" });
             setAllModalities([]);
             setEnrollmentToDelete(null);
+            setHasChanges(false);
         }
-    }, [open, student]); // Depende de 'student' para atualizar quando ele muda
+    }, [open, student]);
 
     const loadModalities = async () => {
         const { data } = await supabase.from('modalities').select('id, name, price').order('name');
         setAllModalities(data as Modality[] || []);
     };
 
-    const handleUpdateStudentData = async (e: React.FormEvent) => { // Renomeado para clareza
-        e.preventDefault(); // Prevenir submit padrão se for chamado por um form
-        if (!student) return;
-        setLoading(true);
-        try {
-            // >>> MODIFICAÇÃO AQUI: Formata o número antes de atualizar <<<
-            const formattedPhone = formatPhoneNumber(formData.phoneNumber);
-            // >>> FIM DA MODIFICAÇÃO <<<
+    const handleOpenChange = (isOpen: boolean) => {
+        if (!isOpen && hasChanges) {
+            onSuccess();
+        }
+        onOpenChange(isOpen);
+    };
 
+    const handleUpdateStudentData = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!student) return;
+        setLoadingData(true);
+        try {
+            const formattedPhone = formatPhoneNumber(formData.phoneNumber);
             const { error } = await supabase
                 .from('students')
                 .update({
                     name: formData.name,
                     cpf: formData.cpf || null,
                     birth_date: formData.birthDate || null,
-                    // >>> MODIFICAÇÃO AQUI: Usa o número formatado <<<
                     phone_number: formattedPhone
-                    // >>> FIM DA MODIFICAÇÃO <<<
                 })
                 .eq('id', student.id);
             if (error) throw error;
             toast.success("Dados do aluno atualizados com sucesso!");
-            onSuccess(); // Chama onSuccess para atualizar a lista principal
-            // Não fecha o modal aqui, permite continuar editando matrículas
+            setHasChanges(true);
         } catch (error: any) {
             toast.error(error.message || "Falha ao atualizar dados do aluno");
         } finally {
-            setLoading(false);
+            setLoadingData(false);
         }
     };
 
@@ -145,7 +140,6 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
             toast.warning("Selecione a modalidade e a data de vencimento.");
             return;
         }
-        // Validar se já existe matrícula para essa modalidade (opcional, mas bom)
         if (studentEnrollments.some(en => en.modality_id === newEnrollment.modalityId)) {
             toast.error("O aluno já possui matrícula nesta modalidade.");
             return;
@@ -153,25 +147,23 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
 
         setActionLoading(true);
         try {
-            // Tenta pegar o preço padrão da modalidade se o campo estiver vazio
             const priceToInsert = newEnrollment.price
                 ? parseFloat(newEnrollment.price)
                 : allModalities.find(m => m.id === newEnrollment.modalityId)?.price ?? null;
-
 
             const { data, error } = await supabase.from('enrollments').insert({
                 student_id: student.id,
                 modality_id: newEnrollment.modalityId,
                 price: priceToInsert,
                 expiry_date: newEnrollment.expiryDate
-            }).select('*, modalities(name)').single(); // Puxa o nome da modalidade
+            }).select('*, modalities(name)').single();
 
             if (error) throw error;
 
             setStudentEnrollments(prev => [...prev, data]);
-            setNewEnrollment({ modalityId: "", price: "", expiryDate: "" }); // Limpa o formulário de nova matrícula
+            setNewEnrollment({ modalityId: "", price: "", expiryDate: "" });
             toast.success("Modalidade adicionada ao aluno.");
-            onSuccess(); // Atualiza a lista principal
+            setHasChanges(true);
         } catch (error: any) {
             toast.error(error.message || "Falha ao adicionar modalidade.");
         } finally {
@@ -181,15 +173,13 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
 
     const confirmDeleteEnrollment = async () => {
         if (!enrollmentToDelete) return;
-
         setActionLoading(true);
         try {
             const { error } = await supabase.from('enrollments').delete().eq('id', enrollmentToDelete);
             if (error) throw error;
-
             setStudentEnrollments(prev => prev.filter(e => e.id !== enrollmentToDelete));
             toast.success("Matrícula removida com sucesso.");
-            onSuccess();
+            setHasChanges(true);
         } catch (error: any) {
             toast.error(error.message || "Falha ao remover matrícula.");
         } finally {
@@ -203,46 +193,53 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
         (modality) => !studentEnrollments.some((enrollment) => enrollment.modality_id === modality.id)
     );
 
+    const handleCloseDialog = () => {
+        handleOpenChange(false);
+    };
+
     return (
         <>
-            <Dialog open={open} onOpenChange={onOpenChange}>
-                {/* Aumentado max-w e removido padding p-0 */}
-                <DialogContent className="sm:max-w-3xl">
-                    <DialogHeader className="p-6 pb-4">
+            <Dialog open={open} onOpenChange={handleOpenChange}>
+                {/* >>> CORREÇÃO: Removido flex flex-col, ajustado max-h e padding <<< */}
+                <DialogContent className="sm:max-w-xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] p-0 flex flex-col">
+                    <DialogHeader className="px-6 pt-6 pb-4 border-b"> {/* Adicionado border-b */}
                         <DialogTitle>Editar Aluno: {student?.name}</DialogTitle>
-                        {/* Adicionado Descrição */}
                         <DialogDescription>Atualize os dados pessoais e gerencie as matrículas do aluno.</DialogDescription>
                     </DialogHeader>
-                    {/* Adicionado ScrollArea para conteúdo longo */}
-                    <ScrollArea className="max-h-[70vh] px-6 pb-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                    {/* >>> CORREÇÃO: ScrollArea agora tem flex-1 para ocupar espaço <<< */}
+                    <ScrollArea className="flex-1 overflow-y-auto">
+                        {/* Adicionado padding interno à ScrollArea */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
                             {/* Coluna de Dados Pessoais */}
                             <form onSubmit={handleUpdateStudentData} className="space-y-4">
                                 <h3 className="font-semibold text-lg border-b pb-2 mb-4">Dados Pessoais</h3>
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Nome *</Label>
-                                    <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loading} />
+                                    <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={loadingData} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="phoneNumber">Telefone (WhatsApp)</Label>
-                                    <Input id="phoneNumber" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={loading} placeholder="+5513999998888" />
+                                    <Input id="phoneNumber" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={loadingData} placeholder="+5513999998888" />
                                     <p className="text-xs text-muted-foreground">Formato: +55 (DDD) (Número)</p>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="cpf">CPF</Label>
-                                    <Input id="cpf" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} disabled={loading} />
+                                    <Input id="cpf" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} disabled={loadingData} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="birthDate">Data de Nascimento</Label>
-                                    <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
+                                    <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loadingData} />
                                 </div>
-                                <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar Dados Pessoais"}</Button>
+                                <Button type="submit" disabled={loadingData}>
+                                    {loadingData ? "Salvando..." : "Salvar Dados Pessoais"}
+                                </Button>
                             </form>
 
                             {/* Coluna de Matrículas */}
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg border-b pb-2 mb-4">Matrículas</h3>
-                                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 border rounded-md p-2 bg-background"> {/* Melhorado estilo e scroll */}
+                                {/* Área de Matrículas Ativas */}
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 border rounded-md p-2 bg-background">
                                     {studentEnrollments.length > 0 ? (
                                         studentEnrollments.map(enrollment => (
                                             <div key={enrollment.id} className="flex items-center justify-between p-2 rounded-md border bg-muted/50">
@@ -265,6 +262,7 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                                     )}
                                 </div>
 
+                                {/* Formulário de Nova Matrícula */}
                                 <form onSubmit={handleAddEnrollment} className="space-y-3 pt-4 border-t">
                                     <h4 className="font-semibold">Nova Matrícula</h4>
                                     <Select
@@ -278,7 +276,6 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                                         </SelectContent>
                                     </Select>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {/* Adicionado step e min */}
                                         <Input type="number" step="0.01" min="0" placeholder="Valor (R$)" value={newEnrollment.price} onChange={e => setNewEnrollment({ ...newEnrollment, price: e.target.value })} disabled={actionLoading || !newEnrollment.modalityId} />
                                         <Input type="date" value={newEnrollment.expiryDate} onChange={e => setNewEnrollment({ ...newEnrollment, expiryDate: e.target.value })} disabled={actionLoading || !newEnrollment.modalityId} />
                                     </div>
@@ -287,19 +284,18 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                             </div>
                         </div>
                     </ScrollArea>
-                    {/* Botão Fechar movido para fora do ScrollArea */}
-                    <div className="flex justify-end pt-4 px-6">
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-                    </div>
+                    {/* Footer com botão Fechar */}
+                    <DialogFooter className="px-6 py-4 border-t"> {/* Adicionado padding e border-t */}
+                        <Button variant="outline" onClick={handleCloseDialog}>Fechar</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
+            {/* AlertDialog para confirmar exclusão */}
             <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        {/* Renomeado para usar AlertDialogAlertTitle */}
                         <AlertDialogAlertTitle>Você tem certeza?</AlertDialogAlertTitle>
-                        {/* Renomeado para usar AlertDialogDesc */}
                         <AlertDialogDesc>
                             Esta ação não pode ser desfeita. Isso irá remover permanentemente a matrícula do aluno nesta modalidade.
                         </AlertDialogDesc>
