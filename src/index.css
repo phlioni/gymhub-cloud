@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design System - Modern UI/UX for GymHub v3
-   Palette: Roxo (Primary), Azul (Accent), Dourado (Highlight)
+/* Design System - Identity: TREINEAI (Roxo Principal)
+   Palette: Vibrant Purple (Primary) + Deep Cyan (Accent).
    All colors MUST be HSL for maximum flexibility.
    Typography uses Inter font for modern look.
 */
@@ -12,28 +12,28 @@
   :root {
     /* Base Colors - Light Mode */
     --background: 0 0% 100%; /* White */
-    --foreground: 224 71% 10%; /* Dark Cool Gray */
+    --foreground: 240 10% 15%; /* Dark Blue-Gray (Neutro) */
 
     /* Cards & Popovers - Light Mode */
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 10%;
+    --card-foreground: 240 10% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 10%;
+    --popover-foreground: 240 10% 15%;
 
     /* Primary Color (Roxo Vibrante) - Light Mode */
     --primary: 260 85% 60%;
     --primary-foreground: 0 0% 100%; /* White */
 
-    /* Secondary Color (Cinza Azulado Claro) - Light Mode */
-    --secondary: 220 16% 96%;
-    --secondary-foreground: 220 14% 10%; /* Darker Blue-Gray */
+    /* Secondary Color (Cinza Claro/Roxo Suave) - Light Mode */
+    --secondary: 260 20% 96%;
+    --secondary-foreground: 240 10% 25%;
 
     /* Muted Color (Cinza Claro) - Light Mode */
-    --muted: 220 16% 96%;
-    --muted-foreground: 220 9% 45%; /* Medium Gray */
+    --muted: 260 20% 96%;
+    --muted-foreground: 240 8% 40%;
 
-    /* Accent Color (Azul Vibrante) - Light Mode */
-    --accent: 210 90% 55%;
+    /* Accent Color (Azul Ciano Profundo) - Light Mode */
+    --accent: 200 90% 40%;
     --accent-foreground: 0 0% 100%; /* White */
 
     /* Destructive Color (Red) - Light Mode */
@@ -41,18 +41,18 @@
     --destructive-foreground: 0 0% 98%;
 
     /* Borders, Inputs, Rings - Light Mode */
-    --border: 220 13% 91%; /* Slightly lighter gray border */
-    --input: 220 13% 91%;
-    --ring: 260 85% 60%; /* Match primary purple */
+    --border: 240 15% 90%;
+    --input: 240 15% 90%;
+    --ring: 260 85% 60%; /* Match primary Purple */
 
     /* General Styles */
     --radius: 0.75rem;
 
-    /* Chart Colors - Roxo, Azul, Dourado, Verde, Rosa */
+    /* Chart Colors - Roxo, Ciano, Verde Lima, etc. */
     --chart-1: 260 85% 60%; /* Roxo */
-    --chart-2: 210 90% 55%; /* Azul */
-    --chart-3: 45 90% 55%; /* Dourado/Amarelo */
-    --chart-4: 150 70% 45%; /* Verde */
+    --chart-2: 200 90% 40%; /* Ciano */
+    --chart-3: 85 90% 50%; /* Verde Lima */
+    --chart-4: 30 90% 55%; /* Laranja para contraste */
     --chart-5: 330 80% 65%; /* Rosa */
 
     /* Modern Gradients - Light Mode */
@@ -63,86 +63,86 @@
     );
     --gradient-accent: linear-gradient(
       135deg,
-      hsl(210 90% 55%) 0%,
-      hsl(220 85% 60%) 100%
+      hsl(200 90% 40%) 0%,
+      hsl(210 85% 45%) 100%
     );
     --gradient-subtle: linear-gradient(
       180deg,
       hsl(0 0% 100%) 0%,
-      hsl(220 16% 98%) 100%
+      hsl(260 20% 98%) 100%
     );
     --gradient-hero: linear-gradient(
       135deg,
       hsl(260 85% 97%) 0%,
       hsl(0 0% 100%) 50%,
-      hsl(210 90% 97%) 100%
+      hsl(200 90% 97%) 100%
     );
 
     /* Modern Shadows */
-    --shadow-xs: 0 1px 2px 0 hsl(224 71% 10% / 0.05);
-    --shadow-sm: 0 1px 3px 0 hsl(224 71% 10% / 0.1),
-      0 1px 2px -1px hsl(224 71% 10% / 0.1);
-    --shadow-md: 0 4px 6px -1px hsl(224 71% 10% / 0.1),
-      0 2px 4px -2px hsl(224 71% 10% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(224 71% 10% / 0.1),
-      0 4px 6px -4px hsl(224 71% 10% / 0.1);
-    --shadow-xl: 0 20px 25px -5px hsl(224 71% 10% / 0.1),
-      0 8px 10px -6px hsl(224 71% 10% / 0.1);
+    --shadow-xs: 0 1px 2px 0 hsl(240 10% 15% / 0.05);
+    --shadow-sm: 0 1px 3px 0 hsl(240 10% 15% / 0.1),
+      0 1px 2px -1px hsl(240 10% 15% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(240 10% 15% / 0.1),
+      0 2px 4px -2px hsl(240 10% 15% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(240 10% 15% / 0.1),
+      0 4px 6px -4px hsl(240 10% 15% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(240 10% 15% / 0.1),
+      0 8px 10px -6px hsl(240 10% 15% / 0.1);
     --shadow-glow: 0 0 50px hsl(260 85% 60% / 0.25);
-    --shadow-glow-accent: 0 0 40px hsl(210 90% 55% / 0.2);
+    --shadow-glow-accent: 0 0 40px hsl(200 90% 40% / 0.2);
 
     /* Sidebar - Light Mode */
-    --sidebar-background: 0 0% 100%; /* White */
-    --sidebar-foreground: 220 14% 30%; /* Darker text for contrast */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 30%;
     --sidebar-primary: 260 85% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 260 85% 96%; /* Very light purple for hover */
-    --sidebar-accent-foreground: 260 85% 60%; /* Primary purple on hover */
-    --sidebar-border: 220 13% 91%;
+    --sidebar-accent: 260 85% 96%;
+    --sidebar-accent-foreground: 260 85% 60%;
+    --sidebar-border: 240 15% 90%;
     --sidebar-ring: 260 85% 60%;
   }
 
   .dark {
     /* Base Colors - Dark Mode */
-    --background: 224 71% 4%; /* Very Dark Blue/Purple */
-    --foreground: 210 40% 98%; /* Light Cool Gray */
+    --background: 240 10% 10%; /* Dark Purple-Gray */
+    --foreground: 240 15% 90%; /* Light Gray-Purple */
 
     /* Cards & Popovers - Dark Mode */
-    --card: 224 71% 6%; /* Slightly lighter dark */
-    --card-foreground: 210 40% 98%;
-    --popover: 224 71% 4%;
-    --popover-foreground: 210 40% 98%;
+    --card: 240 10% 12%;
+    --card-foreground: 240 15% 90%;
+    --popover: 240 10% 10%;
+    --popover-foreground: 240 15% 90%;
 
     /* Primary Color (Roxo) - Dark Mode */
-    --primary: 260 85% 70%; /* Brighter Purple */
-    --primary-foreground: 260 25% 10%; /* Very Dark Purple */
+    --primary: 260 85% 70%;
+    --primary-foreground: 240 10% 10%; /* Dark Purple-Gray */
 
-    /* Secondary Color (Cinza Azulado Escuro) - Dark Mode */
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 210 40% 98%;
+    /* Secondary Color (Dark Gray) - Dark Mode */
+    --secondary: 240 15% 20%;
+    --secondary-foreground: 240 15% 90%;
 
-    /* Muted Color (Cinza Escuro) - Dark Mode */
-    --muted: 220 15% 15%;
-    --muted-foreground: 220 10% 65%; /* Lighter Gray */
+    /* Muted Color (Dark Gray) - Dark Mode */
+    --muted: 240 15% 20%;
+    --muted-foreground: 240 10% 60%;
 
-    /* Accent Color (Azul) - Dark Mode */
-    --accent: 210 90% 65%; /* Brighter Blue */
-    --accent-foreground: 210 40% 5%; /* Very Dark Blue */
+    /* Accent Color (Ciano) - Dark Mode */
+    --accent: 200 90% 60%;
+    --accent-foreground: 240 10% 10%; /* Dark Purple-Gray */
 
     /* Destructive Color (Red) - Dark Mode */
-    --destructive: 0 72% 51%; /* Brighter Red */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
     /* Borders, Inputs, Rings - Dark Mode */
-    --border: 220 15% 15%;
-    --input: 220 15% 15%;
-    --ring: 260 85% 70%; /* Match primary dark purple */
+    --border: 240 15% 20%;
+    --input: 240 15% 20%;
+    --ring: 260 85% 70%; /* Match primary dark Purple */
 
     /* Chart Colors - Dark Mode Adjusted */
     --chart-1: 260 85% 70%;
-    --chart-2: 210 90% 65%;
-    --chart-3: 45 90% 65%;
-    --chart-4: 150 70% 55%;
+    --chart-2: 200 90% 60%;
+    --chart-3: 85 90% 65%;
+    --chart-4: 30 90% 65%;
     --chart-5: 330 80% 75%;
 
     /* Modern Gradients - Dark Mode */
@@ -153,29 +153,29 @@
     );
     --gradient-accent: linear-gradient(
       135deg,
-      hsl(210 90% 65%) 0%,
-      hsl(220 85% 70%) 100%
+      hsl(200 90% 60%) 0%,
+      hsl(210 85% 65%) 100%
     );
     --gradient-subtle: linear-gradient(
       180deg,
-      hsl(224 71% 6%) 0%,
-      hsl(224 71% 4%) 100%
+      hsl(240 10% 12%) 0%,
+      hsl(240 10% 10%) 100%
     );
     --gradient-hero: linear-gradient(
       135deg,
-      hsl(260 40% 8%) 0%,
-      hsl(224 71% 4%) 50%,
-      hsl(210 40% 8%) 100%
+      hsl(260 20% 15%) 0%,
+      hsl(240 10% 10%) 50%,
+      hsl(200 20% 15%) 100%
     );
 
     /* Sidebar - Dark Mode */
-    --sidebar-background: 224 71% 7%; /* Darker sidebar */
-    --sidebar-foreground: 210 40% 98%;
+    --sidebar-background: 240 10% 12%;
+    --sidebar-foreground: 240 15% 90%;
     --sidebar-primary: 260 85% 70%;
-    --sidebar-primary-foreground: 260 25% 10%;
-    --sidebar-accent: 220 15% 18%; /* Slightly lighter accent for hover */
-    --sidebar-accent-foreground: 260 85% 70%; /* Primary dark purple on hover */
-    --sidebar-border: 220 15% 15%;
+    --sidebar-primary-foreground: 240 10% 10%;
+    --sidebar-accent: 240 15% 20%;
+    --sidebar-accent-foreground: 260 85% 70%;
+    --sidebar-border: 240 15% 20%;
     --sidebar-ring: 260 85% 70%;
   }
 }
