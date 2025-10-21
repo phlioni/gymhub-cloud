@@ -21,6 +21,27 @@ interface Modality {
   price: number | null;
 }
 
+// >>> INÍCIO: Função para formatar o número de telefone <<<
+const formatPhoneNumber = (phone: string | null | undefined): string | null => {
+  if (!phone) {
+    return null; // Retorna null se a entrada for vazia, nula ou indefinida
+  }
+  // Remove caracteres não numéricos, exceto o '+' inicial se existir
+  let cleanedNumber = phone.trim().replace(/[^\d+]/g, '');
+  if (!cleanedNumber) { return null; }
+  // Se já começa com '+', assume que está formatado (internacional ou +55)
+  if (cleanedNumber.startsWith('+')) {
+    // Opcional: Validar se é +55 ou outro formato esperado
+    // Ex: if (!cleanedNumber.startsWith('+55')) { console.warn("Formato internacional diferente de +55 detectado:", cleanedNumber); }
+    return cleanedNumber;
+  }
+  // Se não começa com '+', remove todos os não-dígitos restantes e adiciona +55
+  const digitsOnly = cleanedNumber.replace(/\D/g, '');
+  if (!digitsOnly) { return null; } // Caso a limpeza tenha deixado algo inválido
+  return `+55${digitsOnly}`;
+};
+// >>> FIM: Função para formatar o número de telefone <<<
+
 export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess }: AddStudentDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [modalities, setModalities] = useState<Modality[]>([]);
@@ -70,6 +91,10 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
 
     setLoading(true);
     try {
+      // >>> MODIFICAÇÃO AQUI: Formata o número antes de inserir <<<
+      const formattedPhone = formatPhoneNumber(formData.phoneNumber);
+      // >>> FIM DA MODIFICAÇÃO <<<
+
       const { data: student, error: studentError } = await supabase
         .from('students')
         .insert({
@@ -77,7 +102,9 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
           name: formData.name,
           cpf: formData.cpf || null,
           birth_date: formData.birthDate || null,
-          phone_number: formData.phoneNumber || null,
+          // >>> MODIFICAÇÃO AQUI: Usa o número formatado <<<
+          phone_number: formattedPhone,
+          // >>> FIM DA MODIFICAÇÃO <<<
         })
         .select()
         .single();
