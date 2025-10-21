@@ -1,3 +1,5 @@
+// src/pages/Settings.tsx
+
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +11,9 @@ import { toast } from "sonner";
 import { Upload, Info, CheckCircle, Smartphone, Clock, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Importar componentes Select
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
@@ -23,6 +28,7 @@ const Settings = () => {
     phoneNumber: "",
     businessHours: "",
     logoUrl: "",
+    organizationType: "", // <-- Novo estado para o tipo
   });
   const [passwordData, setPasswordData] = useState({
     newPassword: "",
@@ -41,7 +47,8 @@ const Settings = () => {
       const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
       if (profile?.organization_id) {
         setOrganizationId(profile.organization_id);
-        const { data: orgData } = await supabase.from('organizations').select('*').eq('id', profile.organization_id).single();
+        // Incluir organization_type no select
+        const { data: orgData } = await supabase.from('organizations').select('*, organization_type').eq('id', profile.organization_id).single();
         if (orgData) {
           setFormData({
             name: orgData.name || "",
@@ -50,6 +57,7 @@ const Settings = () => {
             phoneNumber: orgData.phone_number || "",
             businessHours: orgData.business_hours || "",
             logoUrl: orgData.logo_url || "",
+            organizationType: orgData.organization_type || "Academia", // <-- Carregar tipo, default para Academia se nulo
           });
         }
       }
@@ -57,6 +65,7 @@ const Settings = () => {
     setLoading(false);
   };
 
+  // ... handleLogoUpload (sem alterações) ...
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0 || !organizationId) return;
     const file = event.target.files[0];
@@ -81,6 +90,7 @@ const Settings = () => {
     }
   };
 
+
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organizationId) {
@@ -89,12 +99,14 @@ const Settings = () => {
     }
     setSaving(true);
     try {
+      // Incluir organization_type no update
       const { error } = await supabase.from('organizations').update({
         name: formData.name,
         address: formData.address,
         owner_name: formData.ownerName,
         phone_number: formData.phoneNumber,
         business_hours: formData.businessHours,
+        organization_type: formData.organizationType, // <-- Salvar o tipo
       }).eq('id', organizationId);
       if (error) throw error;
       toast.success("Configurações salvas com sucesso!");
@@ -105,6 +117,7 @@ const Settings = () => {
     }
   };
 
+  // ... handlePasswordUpdate (sem alterações) ...
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -128,9 +141,11 @@ const Settings = () => {
     }
   };
 
+
   return (
     <main className="flex-1 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6 w-full">
+        {/* Header da Página (sem alterações) */}
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Configurações
@@ -158,6 +173,7 @@ const Settings = () => {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleDetailsSubmit} className="space-y-6">
+                    {/* Logo (sem alterações) */}
                     <div className="space-y-2">
                       <Label>Logo</Label>
                       <div className="flex items-center gap-4">
@@ -166,11 +182,39 @@ const Settings = () => {
                         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}><Upload className="mr-2 h-4 w-4" />{uploading ? "Enviando..." : "Enviar Logo"}</Button>
                       </div>
                     </div>
+                    {/* Nome (sem alterações) */}
                     <div className="space-y-2"><Label htmlFor="name">Nome *</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={saving} /></div>
+
+                    {/* ---- NOVO CAMPO TIPO DE ORGANIZAÇÃO ---- */}
+                    <div className="space-y-2">
+                      <Label htmlFor="organizationType">Tipo de Organização *</Label>
+                      <Select
+                        value={formData.organizationType}
+                        onValueChange={(value) => setFormData({ ...formData, organizationType: value })}
+                        required
+                        disabled={saving}
+                      >
+                        <SelectTrigger id="organizationType">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Academia">Academia</SelectItem>
+                          <SelectItem value="Centro de Treinamento">Centro de Treinamento</SelectItem>
+                          <SelectItem value="Personal Trainer">Personal Trainer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* -------------------------------------- */}
+
+                    {/* Endereço (sem alterações) */}
                     <div className="space-y-2"><Label htmlFor="address">Endereço</Label><Textarea id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} disabled={saving} rows={3} /></div>
+                    {/* Nome Responsável (sem alterações) */}
                     <div className="space-y-2"><Label htmlFor="ownerName">Nome do Responsável</Label><Input id="ownerName" value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} disabled={saving} /></div>
+                    {/* Telefone (sem alterações) */}
                     <div className="space-y-2"><Label htmlFor="phoneNumber">Telefone</Label><Input id="phoneNumber" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={saving} /></div>
+                    {/* Horário (sem alterações) */}
                     <div className="space-y-2"><Label htmlFor="businessHours">Horário de Funcionamento</Label><Textarea id="businessHours" value={formData.businessHours} onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" disabled={saving} rows={3} /></div>
+                    {/* Botão Salvar (sem alterações) */}
                     <div className="flex justify-end pt-4"><Button type="submit" disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar Alterações"}</Button></div>
                   </form>
                 </CardContent>
@@ -178,6 +222,7 @@ const Settings = () => {
             )}
           </TabsContent>
 
+          {/* Automação e Segurança (sem alterações) */}
           <TabsContent value="automation">
             <Card className="mt-4">
               <CardHeader>
