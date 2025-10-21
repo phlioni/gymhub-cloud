@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"; // Import useCallback
+import { useState, useEffect, useCallback } from "react";
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Session, User } from '@supabase/supabase-js'; // Importar tipos
+import { Session, User, AuthSubscription } from '@supabase/supabase-js'; // Importar AuthSubscription
 
 interface AppLayoutData {
     organization: {
@@ -39,14 +39,12 @@ const navigation = [
 
 export default function AppLayout() {
     const [data, setData] = useState<AppLayoutData | null>(null);
-    const [loading, setLoading] = useState(true); // Mantém estado de loading inicial
+    const [loading, setLoading] = useState(true);
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [currentUser, setCurrentUser] = useState<User | null>(null); // Estado para o usuário
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const navigate = useNavigate();
 
-    // Função para buscar perfil e organização, agora usando useCallback
     const checkUserProfileAndOrg = useCallback(async (userId: string) => {
-        // Não define loading aqui, só se realmente for buscar dados novos
         try {
             const { data: profile, error: profileError } = await supabase
                 .from("profiles")
@@ -59,8 +57,8 @@ export default function AppLayout() {
             }
 
             if (profile.role === "superadmin") {
-                navigate("/super-admin", { replace: true }); // Usar replace para não voltar
-                return null; // Retorna null para indicar redirecionamento
+                navigate("/super-admin", { replace: true });
+                return null;
             }
 
             if (!profile.organization_id) {
@@ -68,8 +66,9 @@ export default function AppLayout() {
             }
 
             // Busca dados da organização apenas se necessário (ou se 'data' for null)
-            if (!data || data.organization === null) {
-                setLoading(true); // Define loading APENAS se for buscar org
+            // Evita refetch desnecessário em navegação normal
+            if (!data || !data.organization || data.organization === null) {
+                // setLoading(true); // Só ativa loading se for buscar ORG
                 const { data: orgData, error: orgError } = await supabase
                     .from("organizations")
                     .select("name, logo_url")
@@ -79,82 +78,90 @@ export default function AppLayout() {
                 if (orgError || !orgData) {
                     throw new Error(orgError?.message || "Organização não encontrada.");
                 }
-                setLoading(false); // Finaliza loading após buscar org
-                return { organization: orgData }; // Retorna os dados da org
+                // setLoading(false); // Desativa loading após buscar ORG
+                return { organization: orgData };
             }
-            return data; // Retorna os dados já existentes se não precisar buscar org
-
+            return data; // Retorna os dados existentes
 
         } catch (error: any) {
             console.error("Erro ao verificar perfil/organização:", error.message);
-            await supabase.auth.signOut(); // Força logout em caso de erro crítico
+            await supabase.auth.signOut();
             toast.error("Erro ao carregar dados: " + error.message);
-            navigate('/', { replace: true }); // Redireciona para login
-            return null; // Retorna null em caso de erro
+            navigate('/', { replace: true });
+            return null;
         }
-    }, [navigate, data]); // Adiciona 'data' como dependência do useCallback
+    }, [navigate, data]);
 
 
     useEffect(() => {
-        let isMounted = true; // Flag para evitar updates após desmontar
+        let isMounted = true;
+        let authSubscription: AuthSubscription | null = null; // Variável para guardar a subscrição
 
-        // Função async interna para lidar com a lógica inicial
         const initialize = async (session: Session | null) => {
-            if (!isMounted) return; // Não faz nada se desmontado
+            if (!isMounted) return;
+            setLoading(true); // Inicia loading na inicialização/login
 
             if (session?.user) {
                 setCurrentUser(session.user);
                 const fetchedData = await checkUserProfileAndOrg(session.user.id);
-                if (isMounted && fetchedData !== null) { // Verifica se não houve redirecionamento ou erro
+                if (isMounted && fetchedData !== null) {
                     setData(fetchedData);
                 }
-                // setLoading(false) é chamado dentro de checkUserProfileAndOrg se buscar org
-                // Se não buscar org (data já existe), loading inicial já foi tratado
-                if (data) setLoading(false); // Garante que loading seja false se data já existia
-
-
             } else {
                 setCurrentUser(null);
                 setData(null);
-                navigate('/', { replace: true }); // Redireciona se não houver sessão
+                navigate('/', { replace: true });
             }
+            if (isMounted) setLoading(false); // Finaliza loading após tentativa
         };
 
-        // Verifica a sessão inicial
+        // Verifica a sessão inicial e inicializa
         supabase.auth.getSession().then(({ data: { session } }) => {
-            initialize(session); // Chama a função async interna
+            initialize(session);
+
+            // ----- MOVIDO PARA DENTRO do .then() -----
+            // Configura o listener APÓS verificar a sessão inicial
+            const { data: listener } = supabase.auth.onAuthStateChange(
+                (event, session) => {
+                    if (!isMounted) return;
+
+                    if (event === 'SIGNED_OUT') {
+                        setCurrentUser(null);
+                        setData(null);
+                        // A navegação para '/' acontece implicitamente ao desmontar/remontar
+                        // devido à falta de sessão na próxima verificação inicial.
+                        // Apenas mostramos o toast aqui.
+                        toast.success("Você saiu com segurança.");
+                        // Forçar um estado de loading falso pode ajudar a evitar o skeleton flash
+                        setLoading(false);
+                        navigate('/'); // Adicionado para garantir o redirecionamento imediato
+
+                    } else if (event === 'SIGNED_IN' && session?.user) {
+                        // Reinicializa ao logar
+                        initialize(session);
+                    }
+                }
+            );
+            authSubscription = listener.subscription; // Guarda a subscrição
+            // ----- FIM DO BLOCO MOVIDO -----
         });
 
-        // Listener para mudanças de autenticação
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-            (event, session) => {
-                if (!isMounted) return;
 
-                if (event === 'SIGNED_OUT') {
-                    setCurrentUser(null);
-                    setData(null);
-                    navigate('/'); // Navegação já tratada aqui
-                    toast.success("Você saiu com segurança.");
-                } else if (event === 'SIGNED_IN' && session?.user) {
-                    // Se logou, reinicializa (busca perfil/org)
-                    setLoading(true); // Mostra loading ao logar novamente
-                    initialize(session);
-                }
-                // Para outros eventos como USER_UPDATED, TOKEN_REFRESHED, etc.,
-                // podemos decidir se algo precisa ser feito. Geralmente não.
-            }
-        );
-
-        // Limpa o listener e a flag isMounted ao desmontar
+        // Função de limpeza
         return () => {
             isMounted = false;
-            authListener?.subscription.unsubscribe();
+            // ----- CORREÇÃO APLICADA AQUI -----
+            // Verifica se a subscrição existe antes de cancelar
+            if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
+                authSubscription.unsubscribe();
+            }
+            // ----- FIM DA CORREÇÃO -----
         };
-    }, [navigate, checkUserProfileAndOrg, data]); // Adiciona checkUserProfileAndOrg e data às dependências
+    }, [navigate, checkUserProfileAndOrg]); // Removido 'data' da dependência para evitar re-execução excessiva
 
 
     // ------ Renderização do Loading ------
-    // Mostra Skeleton APENAS se loading for true E não houver currentUser (evita flash na navegação)
+    // Mostra Skeleton APENAS se loading for true E não houver currentUser (no início)
     if (loading && !currentUser) {
         return (
             <div className="flex h-screen bg-muted/30">
@@ -167,11 +174,9 @@ export default function AppLayout() {
             </div>
         );
     }
-    // Se não está carregando e não tem usuário (ex: após erro), renderiza null ou msg
-    if (!currentUser || !data) {
-        // Poderia retornar uma mensagem de erro ou redirecionamento aqui,
-        // mas o onAuthStateChange e checkUserProfileAndOrg já devem ter redirecionado
-        return null; // Evita renderizar layout incompleto
+    // Se não está carregando E não tem usuário/data (após erro/logout), retorna null para o Router lidar
+    if (!loading && (!currentUser || !data)) {
+        return null;
     }
 
     // ------ Renderização Principal ------
@@ -199,7 +204,6 @@ export default function AppLayout() {
 
                 {/* Outlet para renderizar as páginas */}
                 <div className="flex-1 overflow-y-auto">
-                    {/* Renderiza Outlet apenas se data estiver ok */}
                     <Outlet />
                 </div>
             </div>
@@ -208,8 +212,7 @@ export default function AppLayout() {
 }
 
 // --- Componentes Internos (DesktopSidebar, MobileSidebar, SidebarContent) ---
-// (O código desses componentes permanece o mesmo da resposta anterior,
-//  incluindo a modificação no handleSignOut e a passagem de setMobileMenuOpen)
+// (O código desses componentes permanece o mesmo das respostas anteriores)
 
 // Ajustado para receber setMobileMenuOpen
 const DesktopSidebar = ({ data, setMobileMenuOpen }: { data: AppLayoutData | null; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => (
@@ -228,17 +231,17 @@ const MobileSidebar = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayo
 
 // Ajustado para receber e usar setMobileMenuOpen
 const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayoutData | null; onLinkClick?: () => void; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
-    const navigate = useNavigate(); // useNavigate continua aqui
+    // useNavigate não é mais necessário aqui se a navegação é tratada no AppLayout
     const location = useLocation();
 
-    // ---- FUNÇÃO handleSignOut MODIFICADA (Mantida da resposta anterior) ----
+    // ---- FUNÇÃO handleSignOut MODIFICADA ----
     const handleSignOut = async () => {
         setMobileMenuOpen(false); // Fecha o menu mobile primeiro
         const { error } = await supabase.auth.signOut(); // Espera o signOut completar
         if (error) {
             toast.error("Falha ao sair: " + error.message);
         }
-        // A navegação agora é tratada pelo onAuthStateChange no AppLayout
+        // A navegação será tratada pelo onAuthStateChange no AppLayout
     };
     // ---- FIM DA MODIFICAÇÃO ----
 
