@@ -1,3 +1,4 @@
+// src/components/AppLayout.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,13 +13,14 @@ import {
     GraduationCap,
     Package,
     Settings,
-    Dumbbell,
+    Dumbbell, // Manter Dumbbell
     CheckCheck,
-    Calendar
+    Calendar,
+    Weight, // <<< 1. Importar novo ícone para Treinos (ou outro de sua preferência)
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Session, User, AuthSubscription } from '@supabase/supabase-js'; // Importar AuthSubscription
+import { Session, User, AuthSubscription } from '@supabase/supabase-js';
 
 interface AppLayoutData {
     organization: {
@@ -27,17 +29,21 @@ interface AppLayoutData {
     } | null;
 }
 
+// <<< 2. Adicionar "Treinos" à navegação
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Alunos", href: "/students", icon: Users },
     { name: "Modalidades", href: "/modalities", icon: GraduationCap },
     { name: "Produtos", href: "/products", icon: Package },
     { name: "Agendamentos", href: "/scheduling", icon: Calendar },
+    { name: "Treinos", href: "/workouts", icon: Weight }, // <<< Novo item aqui
     { name: "Check-ins", href: "/check-ins", icon: CheckCheck },
     { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
+
 export default function AppLayout() {
+    // ... (resto do componente AppLayout permanece igual) ...
     const [data, setData] = useState<AppLayoutData | null>(null);
     const [loading, setLoading] = useState(true);
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -212,7 +218,6 @@ export default function AppLayout() {
 }
 
 // --- Componentes Internos (DesktopSidebar, MobileSidebar, SidebarContent) ---
-// (O código desses componentes permanece o mesmo das respostas anteriores)
 
 // Ajustado para receber setMobileMenuOpen
 const DesktopSidebar = ({ data, setMobileMenuOpen }: { data: AppLayoutData | null; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => (
@@ -231,19 +236,19 @@ const MobileSidebar = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayo
 
 // Ajustado para receber e usar setMobileMenuOpen
 const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayoutData | null; onLinkClick?: () => void; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
-    // useNavigate não é mais necessário aqui se a navegação é tratada no AppLayout
     const location = useLocation();
+    const navigate = useNavigate(); // useNavigate ainda é útil para o logout
 
-    // ---- FUNÇÃO handleSignOut MODIFICADA ----
     const handleSignOut = async () => {
         setMobileMenuOpen(false); // Fecha o menu mobile primeiro
-        const { error } = await supabase.auth.signOut(); // Espera o signOut completar
+        const { error } = await supabase.auth.signOut();
         if (error) {
             toast.error("Falha ao sair: " + error.message);
+        } else {
+            // A navegação será tratada pelo onAuthStateChange no AppLayout, mas podemos adicionar aqui para garantir
+            navigate('/');
         }
-        // A navegação será tratada pelo onAuthStateChange no AppLayout
     };
-    // ---- FIM DA MODIFICAÇÃO ----
 
     return (
         <>
@@ -255,7 +260,7 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
                             <img src={data.organization.logo_url} alt="Logo" className="h-12 w-12 rounded-xl object-cover shadow-md ring-2 ring-primary/10" />
                         ) : (
                             <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md">
-                                <Dumbbell className="h-7 w-7 text-white" />
+                                <Dumbbell className="h-7 w-7 text-white" /> {/* Manter Dumbbell aqui */}
                             </div>
                         )}
                         <div className="flex flex-col">
@@ -302,7 +307,7 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
                 <Button
                     variant="ghost"
                     className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 rounded-xl"
-                    onClick={handleSignOut} // Chama a função modificada
+                    onClick={handleSignOut}
                 >
                     <LogOut className="h-5 w-5 mr-3" />
                     <span>Sair</span>

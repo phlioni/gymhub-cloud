@@ -74,7 +74,7 @@ const SuperAdmin = () => {
               <Dumbbell className="h-6 w-6 text-primary" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              GymHub
+              TreineAI
             </span>
             <span className="ml-2 text-sm text-muted-foreground">Super Admin</span>
           </div>
