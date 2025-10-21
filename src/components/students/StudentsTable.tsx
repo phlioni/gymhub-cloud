@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Edit, Trash2, CalendarClock, Bell, BellOff } from "lucide-react";
+import { Edit, Trash2, CalendarClock, Bell, BellOff, Zap, CheckCircle } from "lucide-react"; // Adicionado Zap, CheckCircle
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EditStudentDialog } from "./EditStudentDialog";
@@ -24,6 +24,8 @@ interface Student {
     price: number | null;
     modalities: { name: string } | null;
   }[];
+  gympass_user_token: string | null; // <-- NOVO CAMPO
+  totalpass_user_token: string | null; // <-- NOVO CAMPO
 }
 
 interface StudentsTableProps {
@@ -96,7 +98,7 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                   <TableHead>Nome</TableHead>
                   <TableHead>Modalidades e Preços</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Automação</TableHead>
+                  <TableHead className="text-center">Integração</TableHead> {/* <-- NOVO/RENOMEADO */}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -108,6 +110,10 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
                   const status = getEnrollmentStatus(latestEnrollment?.expiry_date || null);
                   const isAutomationActive = status.daysRemaining !== null && status.daysRemaining <= 10 && status.daysRemaining >= 1;
+
+                  // Lógica para novos ícones de integração
+                  const isGympass = !!student.gympass_user_token;
+                  const isTotalPass = !!student.totalpass_user_token;
 
                   return (
                     <TableRow key={student.id}>
@@ -132,16 +138,44 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                         <Badge variant={status.variant}>{status.text}</Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-block">
-                              {isAutomationActive ? <Bell className="h-5 w-5 text-yellow-500" /> : <BellOff className="h-5 w-5 text-muted-foreground/50" />}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{isAutomationActive ? "Lembretes de vencimento por WhatsApp estão ativos." : "Automação de lembretes inativa."}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <div className="flex items-center justify-center space-x-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-block">
+                                {isAutomationActive ? <Bell className="h-5 w-5 text-yellow-500" /> : <BellOff className="h-5 w-5 text-muted-foreground/50" />}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{isAutomationActive ? "Lembretes de vencimento por WhatsApp estão ativos." : "Automação de lembretes inativa."}</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          {isGympass && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Zap className="h-5 w-5 text-green-600" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Aluno Gympass/Wellhub conectado.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
+                          {isTotalPass && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <CheckCircle className="h-5 w-5 text-blue-600" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Aluno TotalPass conectado.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
+                          {!isGympass && !isTotalPass && !isAutomationActive && (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
@@ -170,6 +204,10 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
             ? student.enrollments.sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime())[0]
             : null;
           const status = getEnrollmentStatus(latestEnrollment?.expiry_date || null);
+
+          const isGympass = !!student.gympass_user_token;
+          const isTotalPass = !!student.totalpass_user_token;
+
           return (
             <Card key={student.id} className="w-full">
               <div className="p-4">
@@ -199,7 +237,11 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                       <span className="text-sm text-muted-foreground">N/A</span>
                     )}
                   </div>
-                  <Badge variant={status.variant}>{status.text}</Badge>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={status.variant}>{status.text}</Badge>
+                    {isGympass && <Zap className="h-4 w-4 text-green-600" title="Gympass/Wellhub" />}
+                    {isTotalPass && <CheckCircle className="h-4 w-4 text-blue-600" title="TotalPass" />}
+                  </div>
                 </div>
                 <div className="mt-4">
                   <Button variant="outline" size="sm" className="w-full" onClick={() => handleRenewClick(student)}>
