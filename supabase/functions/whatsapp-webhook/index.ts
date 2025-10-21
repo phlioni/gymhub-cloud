@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 // Resposta padrão do bot com o menu de opções corrigido
-const BOT_RESPONSE_MENU = `Olá! Sou seu assistente virtual da GymHub. Como posso te ajudar hoje?
+const BOT_RESPONSE_MENU = `Olá! Sou seu assistente virtual da TreineAI. Como posso te ajudar hoje?
 
 1. *Ver modalidades e preços*
 2. *Meus agendamentos*

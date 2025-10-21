@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import AppLayout from "./components/AppLayout";
 import CheckIns from "./pages/CheckIns";
 import Scheduling from "./pages/Scheduling";
+import Workouts from "./pages/Workouts";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/modalities" element={<Modalities />} />
             <Route path="/products" element={<Products />} />
             <Route path="/check-ins" element={<CheckIns />} />
+            <Route path="/workouts" element={<Workouts />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/scheduling" element={<Scheduling />} /> {/* 2. Adicione a nova rota */}
           </Route>

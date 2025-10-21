@@ -59,7 +59,7 @@ export const Sidebar = ({ organizationName, logoUrl, isOpen }: SidebarProps) => 
           )}
           <div className={cn("flex flex-col", { "hidden": !isOpen && "md:hidden" })}>
             <span className="text-lg font-bold text-foreground tracking-tight">
-              {organizationName || "GymHub"}
+              {organizationName || "TreineAI"}
             </span>
             <span className="text-xs text-muted-foreground">Gestão Completa</span>
           </div>
