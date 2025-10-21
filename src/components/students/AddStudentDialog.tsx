@@ -53,6 +53,8 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
     modalityId: "",
     enrollmentPrice: "",
     expiryDate: "",
+    gympassUserToken: "", // <-- NOVO CAMPO
+    totalpassUserToken: "", // <-- NOVO CAMPO
   });
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
       setFormData(prev => ({ ...prev, expiryDate: formattedDefaultDate }));
     } else {
       // Limpa o formulário quando o modal é fechado
-      setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "", modalityId: "", enrollmentPrice: "", expiryDate: "" });
+      setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "", modalityId: "", enrollmentPrice: "", expiryDate: "", gympassUserToken: "", totalpassUserToken: "" }); // <-- NOVO CAMPO
     }
   }, [open]);
 
@@ -104,6 +106,8 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
           birth_date: formData.birthDate || null,
           // >>> MODIFICAÇÃO AQUI: Usa o número formatado <<<
           phone_number: formattedPhone,
+          gympass_user_token: formData.gympassUserToken || null, // <-- NOVO CAMPO
+          totalpass_user_token: formData.totalpassUserToken || null, // <-- NOVO CAMPO
           // >>> FIM DA MODIFICAÇÃO <<<
         })
         .select()
@@ -164,6 +168,22 @@ export const AddStudentDialog = ({ open, onOpenChange, organizationId, onSuccess
                 <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loading} />
               </div>
             </div>
+
+            {/* NOVOS CAMPOS DE TOKEN */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="font-semibold">Tokens de Acesso (Opcional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="gympassUserToken" className="text-xs">Token Gympass/Wellhub</Label>
+                <Input id="gympassUserToken" value={formData.gympassUserToken} onChange={(e) => setFormData({ ...formData, gympassUserToken: e.target.value })} placeholder="ID de Beneficiário" disabled={loading} />
+                <p className="text-xs text-muted-foreground">O ID que o aluno deve ter em seu app.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalpassUserToken" className="text-xs">Token TotalPass</Label>
+                <Input id="totalpassUserToken" value={formData.totalpassUserToken} onChange={(e) => setFormData({ ...formData, totalpassUserToken: e.target.value })} placeholder="ID de Beneficiário" disabled={loading} />
+                <p className="text-xs text-muted-foreground">O ID que o aluno deve ter em seu app.</p>
+              </div>
+            </div>
+            {/* FIM NOVOS CAMPOS */}
 
             <div className="space-y-2 pt-4 border-t">
               <Label className="font-semibold">Matrícula Inicial (Opcional)</Label>

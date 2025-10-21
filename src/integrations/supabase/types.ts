@@ -9,30 +9,69 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      check_ins: {
+        Row: {
+          checked_in_at: string
+          id: string
+          organization_id: string
+          student_id: string
+          source: string | null // <-- NOVO
+        }
+        Insert: {
+          checked_in_at?: string
+          id?: string
+          organization_id: string
+          student_id: string
+          source?: string | null // <-- NOVO
+        }
+        Update: {
+          checked_in_at?: string
+          id?: string
+          organization_id?: string
+          student_id?: string
+          source?: string | null // <-- NOVO
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_ins_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           created_at: string
           expiry_date: string
           id: string
           modality_id: string
-          student_id: string
           price: number | null
+          student_id: string
         }
         Insert: {
           created_at?: string
           expiry_date: string
           id?: string
           modality_id: string
-          student_id: string
           price?: number | null
+          student_id: string
         }
         Update: {
           created_at?: string
           expiry_date?: string
           id?: string
           modality_id?: string
-          student_id?: string
           price?: number | null
+          student_id?: string
         }
         Relationships: [
           {
@@ -60,6 +99,8 @@ export type Database = {
           organization_id: string
           price: number | null
           pricing_type: string | null
+          gympass_modality_id: string | null
+          totalpass_modality_id: string | null
         }
         Insert: {
           created_at?: string
@@ -69,6 +110,8 @@ export type Database = {
           organization_id: string
           price?: number | null
           pricing_type?: string | null
+          gympass_modality_id?: string | null
+          totalpass_modality_id?: string | null
         }
         Update: {
           created_at?: string
@@ -78,6 +121,8 @@ export type Database = {
           organization_id?: string
           price?: number | null
           pricing_type?: string | null
+          gympass_modality_id?: string | null
+          totalpass_modality_id?: string | null
         }
         Relationships: [
           {
@@ -99,6 +144,11 @@ export type Database = {
           name: string
           owner_name: string | null
           phone_number: string | null
+          organization_type: string | null
+          gympass_api_key: string | null // Renomeado no frontend, mas mantido aqui por compatibilidade
+          gympass_integration_code: number | null // Alterado para number
+          totalpass_api_key: string | null // Renomeado no frontend, mas mantido aqui por compatibilidade
+          totalpass_integration_code: string | null
         }
         Insert: {
           address?: string | null
@@ -109,6 +159,11 @@ export type Database = {
           name: string
           owner_name?: string | null
           phone_number?: string | null
+          organization_type?: string | null
+          gympass_api_key?: string | null
+          gympass_integration_code?: number | null // Alterado para number
+          totalpass_api_key?: string | null
+          totalpass_integration_code?: string | null
         }
         Update: {
           address?: string | null
@@ -119,6 +174,11 @@ export type Database = {
           name?: string
           owner_name?: string | null
           phone_number?: string | null
+          organization_type?: string | null
+          gympass_api_key?: string | null
+          gympass_integration_code?: number | null // Alterado para number
+          totalpass_api_key?: string | null
+          totalpass_integration_code?: string | null
         }
         Relationships: []
       }
@@ -298,6 +358,9 @@ export type Database = {
           name: string
           organization_id: string
           phone_number: string | null
+          gympass_user_token: string | null
+          totalpass_user_token: string | null
+          email: string | null // <-- NOVO
         }
         Insert: {
           birth_date?: string | null
@@ -307,6 +370,9 @@ export type Database = {
           name: string
           organization_id: string
           phone_number?: string | null
+          gympass_user_token?: string | null
+          totalpass_user_token?: string | null
+          email?: string | null // <-- NOVO
         }
         Update: {
           birth_date?: string | null
@@ -316,6 +382,9 @@ export type Database = {
           name?: string
           organization_id?: string
           phone_number?: string | null
+          gympass_user_token?: string | null
+          totalpass_user_token?: string | null
+          email?: string | null // <-- NOVO
         }
         Relationships: [
           {
@@ -327,11 +396,73 @@ export type Database = {
           },
         ]
       }
+      appointments: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          modality_id: string | null
+          notes: string | null
+          organization_id: string
+          start_time: string
+          status: string | null
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          modality_id?: string | null
+          notes?: string | null
+          organization_id: string
+          start_time: string
+          status?: string | null
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          modality_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          start_time?: string
+          status?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_modality_id_fkey"
+            columns: ["modality_id"]
+            isOneToOne: false
+            referencedRelation: "modalities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_checkin_count: { // <-- Função adicionada em uma migração anterior
+        Args: { student_id_param: string }
+        Returns: number
+      }
       get_enrollment_revenue_stats: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -465,3 +596,4 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
   ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
   : never
+}

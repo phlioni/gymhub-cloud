@@ -39,6 +39,8 @@ interface Student {
     birth_date: string | null;
     phone_number: string | null;
     enrollments: any[];
+    gympass_user_token: string | null; // <-- NOVO CAMPO
+    totalpass_user_token: string | null; // <-- NOVO CAMPO
 }
 
 interface EditStudentDialogProps {
@@ -70,7 +72,14 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
     const [actionLoading, setActionLoading] = useState(false);
     const [allModalities, setAllModalities] = useState<Modality[]>([]);
     const [studentEnrollments, setStudentEnrollments] = useState<any[]>([]);
-    const [formData, setFormData] = useState({ name: "", cpf: "", birthDate: "", phoneNumber: "" });
+    const [formData, setFormData] = useState({
+        name: "",
+        cpf: "",
+        birthDate: "",
+        phoneNumber: "",
+        gympassUserToken: "", // <-- NOVO ESTADO
+        totalpassUserToken: "" // <-- NOVO ESTADO
+    });
     const [newEnrollment, setNewEnrollment] = useState({ modalityId: "", price: "", expiryDate: "" });
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [enrollmentToDelete, setEnrollmentToDelete] = useState<string | null>(null);
@@ -83,6 +92,8 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                 cpf: student.cpf || "",
                 birthDate: student.birth_date || "",
                 phoneNumber: student.phone_number || "",
+                gympassUserToken: student.gympass_user_token || "", // <-- POPULAR ESTADO
+                totalpassUserToken: student.totalpass_user_token || "", // <-- POPULAR ESTADO
             });
             // Ordena as matrículas pela data de vencimento mais recente primeiro
             const sortedEnrollments = (student.enrollments || []).sort((a, b) =>
@@ -92,7 +103,7 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
             loadModalities();
             setHasChanges(false);
         } else if (!open) {
-            setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "" });
+            setFormData({ name: "", cpf: "", birthDate: "", phoneNumber: "", gympassUserToken: "", totalpassUserToken: "" }); // <-- RESETAR ESTADO
             setStudentEnrollments([]);
             setNewEnrollment({ modalityId: "", price: "", expiryDate: "" });
             setAllModalities([]);
@@ -125,7 +136,9 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                     name: formData.name,
                     cpf: formData.cpf || null,
                     birth_date: formData.birthDate || null,
-                    phone_number: formattedPhone
+                    phone_number: formattedPhone,
+                    gympass_user_token: formData.gympassUserToken || null, // <-- SALVAR CAMPO
+                    totalpass_user_token: formData.totalpassUserToken || null, // <-- SALVAR CAMPO
                 })
                 .eq('id', student.id);
             if (error) throw error;
@@ -232,6 +245,19 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                                     <Label htmlFor="birthDate">Data de Nascimento</Label>
                                     <Input id="birthDate" type="date" value={formData.birthDate} onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })} disabled={loadingData} />
                                 </div>
+
+                                <div className="space-y-4 pt-4 border-t">
+                                    <h3 className="font-semibold text-lg pb-2">Tokens de Acesso</h3>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="gympassUserToken" className="text-xs">Token Gympass/Wellhub</Label>
+                                        <Input id="gympassUserToken" value={formData.gympassUserToken} onChange={(e) => setFormData({ ...formData, gympassUserToken: e.target.value })} placeholder="ID de Beneficiário" disabled={loadingData} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="totalpassUserToken" className="text-xs">Token TotalPass</Label>
+                                        <Input id="totalpassUserToken" value={formData.totalpassUserToken} onChange={(e) => setFormData({ ...formData, totalpassUserToken: e.target.value })} placeholder="ID de Beneficiário" disabled={loadingData} />
+                                    </div>
+                                </div>
+
                                 <Button type="submit" disabled={loadingData}>
                                     {loadingData ? "Salvando..." : "Salvar Dados Pessoais"}
                                 </Button>

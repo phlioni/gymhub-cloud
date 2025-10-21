@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle, Calendar as CalendarIcon } from "lucide-react";
+import { Search, CheckCircle, Calendar as CalendarIcon, MessageCircle, Zap } from "lucide-react"; // Importar ícones novos
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 interface CheckIn {
     id: string;
     checked_in_at: string;
+    source: 'WhatsApp' | 'Gympass' | 'TotalPass' | 'Manual' | null; // <-- NOVO CAMPO
     students: {
         name: string;
         phone_number: string | null;
@@ -25,6 +26,22 @@ interface CheckIn {
             } | null;
         }[];
     };
+}
+
+// Função auxiliar para ícone
+const getSourceIcon = (source: CheckIn['source']) => {
+    switch (source) {
+        case 'Gympass':
+            return <Zap className="h-4 w-4 text-green-600" title="Check-in via Gympass" />;
+        case 'TotalPass':
+            return <CheckCircle className="h-4 w-4 text-blue-600" title="Check-in via TotalPass" />;
+        case 'WhatsApp':
+            return <MessageCircle className="h-4 w-4 text-teal-500" title="Check-in via WhatsApp" />;
+        case 'Manual':
+            return <CheckCircle className="h-4 w-4 text-primary" title="Check-in Manual" />;
+        default:
+            return <CheckCircle className="h-4 w-4 text-muted-foreground" title="Check-in" />;
+    }
 }
 
 const CheckIns = () => {
@@ -50,6 +67,7 @@ const CheckIns = () => {
                 .select(`
                     id,
                     checked_in_at,
+                    source,
                     students (
                         name,
                         phone_number,
@@ -154,6 +172,7 @@ const CheckIns = () => {
                                             <TableHead>Modalidade</TableHead>
                                             <TableHead>Data</TableHead>
                                             <TableHead>Horário</TableHead>
+                                            <TableHead>Origem</TableHead> {/* <-- NOVA COLUNA */}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -164,11 +183,12 @@ const CheckIns = () => {
                                                     <TableCell>{getModalityName(checkin.students)}</TableCell>
                                                     <TableCell>{formatDate(checkin.checked_in_at)}</TableCell>
                                                     <TableCell>{formatTime(checkin.checked_in_at)}</TableCell>
+                                                    <TableCell>{getSourceIcon(checkin.source)}</TableCell> {/* <-- EXIBIÇÃO DO ÍCONE */}
                                                 </TableRow>
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="h-24 text-center">
+                                                <TableCell colSpan={5} className="h-24 text-center">
                                                     Nenhum check-in encontrado para esta data.
                                                 </TableCell>
                                             </TableRow>
@@ -184,8 +204,8 @@ const CheckIns = () => {
                                 filteredCheckins.map((checkin) => (
                                     <Card key={checkin.id}>
                                         <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                                            <div className="p-3 bg-primary/10 rounded-full">
-                                                <CheckCircle className="h-6 w-6 text-primary" />
+                                            <div className="p-3 bg-muted rounded-full">
+                                                {getSourceIcon(checkin.source)} {/* <-- EXIBIÇÃO DO ÍCONE */}
                                             </div>
                                             <div>
                                                 <CardTitle className="text-lg">{checkin.students.name}</CardTitle>
