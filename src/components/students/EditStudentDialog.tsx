@@ -5,17 +5,17 @@ import {
     DialogHeader,
     DialogTitle,
     DialogDescription,
-    DialogFooter // Importar DialogFooter
+    DialogFooter
 } from "@/components/ui/dialog";
 import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
-    AlertDialogDescription as AlertDialogDesc, // Renomeado para evitar conflito
+    AlertDialogDescription as AlertDialogDesc,
     AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle as AlertDialogAlertTitle, // Renomeado para evitar conflito
+    AlertDialogTitle as AlertDialogAlertTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Trash2, PlusCircle } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Importar ScrollArea
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Student {
     id: string;
@@ -84,7 +84,11 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                 birthDate: student.birth_date || "",
                 phoneNumber: student.phone_number || "",
             });
-            setStudentEnrollments(student.enrollments || []);
+            // Ordena as matrículas pela data de vencimento mais recente primeiro
+            const sortedEnrollments = (student.enrollments || []).sort((a, b) =>
+                new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime()
+            );
+            setStudentEnrollments(sortedEnrollments);
             loadModalities();
             setHasChanges(false);
         } else if (!open) {
@@ -160,7 +164,8 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
 
             if (error) throw error;
 
-            setStudentEnrollments(prev => [...prev, data]);
+            // Adiciona a nova matrícula e reordena
+            setStudentEnrollments(prev => [...prev, data].sort((a, b) => new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime()));
             setNewEnrollment({ modalityId: "", price: "", expiryDate: "" });
             toast.success("Modalidade adicionada ao aluno.");
             setHasChanges(true);
@@ -200,16 +205,13 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
     return (
         <>
             <Dialog open={open} onOpenChange={handleOpenChange}>
-                {/* >>> CORREÇÃO: Removido flex flex-col, ajustado max-h e padding <<< */}
-                <DialogContent className="sm:max-w-xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] p-0 flex flex-col">
-                    <DialogHeader className="px-6 pt-6 pb-4 border-b"> {/* Adicionado border-b */}
+                <DialogContent className="sm:max-w-xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] flex flex-col p-0">
+                    <DialogHeader className="px-6 pt-6 pb-4 border-b">
                         <DialogTitle>Editar Aluno: {student?.name}</DialogTitle>
                         <DialogDescription>Atualize os dados pessoais e gerencie as matrículas do aluno.</DialogDescription>
                     </DialogHeader>
-                    {/* >>> CORREÇÃO: ScrollArea agora tem flex-1 para ocupar espaço <<< */}
                     <ScrollArea className="flex-1 overflow-y-auto">
-                        {/* Adicionado padding interno à ScrollArea */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 p-6"> {/* Ajustado gap-y */}
                             {/* Coluna de Dados Pessoais */}
                             <form onSubmit={handleUpdateStudentData} className="space-y-4">
                                 <h3 className="font-semibold text-lg border-b pb-2 mb-4">Dados Pessoais</h3>
@@ -267,7 +269,7 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                                     <h4 className="font-semibold">Nova Matrícula</h4>
                                     <Select
                                         value={newEnrollment.modalityId}
-                                        onValueChange={(id) => setNewEnrollment({ ...newEnrollment, modalityId: id, price: String(allModalities.find(m => m.id === id)?.price ?? "") })}
+                                        onValueChange={(id) => setNewEnrollment({ ...newEnrollment, modalityId: id, price: String(allModalities.find(m => m.id === id)?.price ?? ""), expiryDate: newEnrollment.expiryDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] })} // Auto preenche data
                                         disabled={actionLoading}
                                     >
                                         <SelectTrigger><SelectValue placeholder="Selecione a modalidade" /></SelectTrigger>
@@ -275,17 +277,24 @@ export const EditStudentDialog = ({ student, open, onOpenChange, onSuccess }: Ed
                                             {availableModalities.length > 0 ? availableModalities.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>) : <div className="p-2 text-sm text-muted-foreground text-center">Nenhuma outra modalidade disponível</div>}
                                         </SelectContent>
                                     </Select>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <Input type="number" step="0.01" min="0" placeholder="Valor (R$)" value={newEnrollment.price} onChange={e => setNewEnrollment({ ...newEnrollment, price: e.target.value })} disabled={actionLoading || !newEnrollment.modalityId} />
-                                        <Input type="date" value={newEnrollment.expiryDate} onChange={e => setNewEnrollment({ ...newEnrollment, expiryDate: e.target.value })} disabled={actionLoading || !newEnrollment.modalityId} />
+                                    {/* >>> CORREÇÃO DE LAYOUT AQUI <<< */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-3"> {/* Alterado gap-y */}
+                                        <div className="space-y-1"> {/* Agrupado com Label */}
+                                            <Label htmlFor="newEnrollmentPrice" className="text-xs">Valor (R$)</Label>
+                                            <Input id="newEnrollmentPrice" type="number" step="0.01" min="0" placeholder="Valor" value={newEnrollment.price} onChange={e => setNewEnrollment({ ...newEnrollment, price: e.target.value })} disabled={actionLoading || !newEnrollment.modalityId} />
+                                        </div>
+                                        <div className="space-y-1"> {/* Agrupado com Label */}
+                                            <Label htmlFor="newExpiryDate" className="text-xs">Vencimento</Label>
+                                            <Input id="newExpiryDate" type="date" value={newEnrollment.expiryDate} onChange={e => setNewEnrollment({ ...newEnrollment, expiryDate: e.target.value })} disabled={actionLoading || !newEnrollment.modalityId} required />
+                                        </div>
+                                        {/* >>> FIM DA CORREÇÃO DE LAYOUT <<< */}
                                     </div>
                                     <Button type="submit" className="w-full" disabled={actionLoading || !newEnrollment.modalityId}><PlusCircle className="mr-2 h-4 w-4" />{actionLoading ? 'Adicionando...' : 'Adicionar Matrícula'}</Button>
                                 </form>
                             </div>
                         </div>
                     </ScrollArea>
-                    {/* Footer com botão Fechar */}
-                    <DialogFooter className="px-6 py-4 border-t"> {/* Adicionado padding e border-t */}
+                    <DialogFooter className="px-6 py-4 border-t">
                         <Button variant="outline" onClick={handleCloseDialog}>Fechar</Button>
                     </DialogFooter>
                 </DialogContent>
