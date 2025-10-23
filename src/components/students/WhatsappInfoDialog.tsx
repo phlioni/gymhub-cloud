@@ -17,7 +17,7 @@ interface WhatsappInfoDialogProps {
     onOpenChange: (open: boolean) => void;
 }
 
-const WHATSAPP_LINK = "https://wa.me/15075708178"; // Link único e fixo
+const WHATSAPP_LINK = "https://wa.me/15558825828"; // Link único e fixo
 
 export const WhatsappInfoDialog = ({ open, onOpenChange }: WhatsappInfoDialogProps) => {
 
