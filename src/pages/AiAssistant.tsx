@@ -72,7 +72,7 @@ const AiAssistantPage = () => {
     const handleReviewAndApprove = (suggestion: PlanSuggestion) => {
         const workoutForEdit = {
             name: `Plano ArIA - ${suggestion.student_name}`,
-            description: `OBJETIVO: ${suggestion.goal_details?.objective || 'Não definido'}.\n\n` +
+            description: `OBJETIVO: ${suggestion.goal_details?.objective_text || 'Não definido'}.\n\n` +
                 `DADOS: Peso: ${suggestion.goal_details?.weight || 'N/A'} | Altura: ${suggestion.goal_details?.height || 'N/A'} | Nível: ${suggestion.goal_details?.activity_level || 'N/A'}\n\n` +
                 `--- SUGESTÃO DA ArIA ---\n${suggestion.plan_suggestion.generated_plan}`,
             frequency: 'weekly',
@@ -118,7 +118,7 @@ const AiAssistantPage = () => {
                         <Card key={index} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2"><User /> {s.student_name}</CardTitle>
-                                <CardDescription>Objetivo: <Badge variant="outline">{s.goal_details?.objective || 'Não informado'}</Badge></CardDescription>
+                                <CardDescription>Objetivo: <Badge variant="outline">{s.goal_details?.objective_text || 'Não informado'}</Badge></CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1 space-y-4">
                                 <div>
@@ -128,7 +128,7 @@ const AiAssistantPage = () => {
                                     </p>
                                 </div>
                                 <div className="p-3 bg-muted/50 rounded-md">
-                                    <h4 className="font-semibold text-sm">Sugestão da ArIA:</h4>
+                                    <h4 className="font-semibold text-sm">Sugestão:</h4>
                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{s.plan_suggestion?.generated_plan || 'Nenhuma sugestão gerada.'}</p>
                                 </div>
                             </CardContent>

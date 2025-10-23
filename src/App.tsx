@@ -15,7 +15,8 @@ import AppLayout from "./components/AppLayout";
 import CheckIns from "./pages/CheckIns";
 import Scheduling from "./pages/Scheduling";
 import Workouts from "./pages/Workouts";
-import AiAssistantPage from "./pages/AiAssistant"; // <<< 1. Importar a nova página
+import AiAssistantPage from "./pages/AiAssistant";
+import LandingPage from "./pages/LandingPage"; // <<< 1. IMPORTE A NOVA PÁGINA
 
 const queryClient = new QueryClient();
 
@@ -27,7 +28,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           {/* Rotas que NÃO usam o layout principal */}
-          <Route path="/" element={<Auth />} />
+          <Route path="/" element={<LandingPage />} /> {/* 2. ADICIONE A ROTA DA LANDING PAGE */}
+          <Route path="/login" element={<Auth />} /> {/* 3. AJUSTE A ROTA DE LOGIN */}
           <Route path="/super-admin" element={<SuperAdmin />} />
 
           {/* Rota "pai" que usa o AppLayout */}
@@ -39,7 +41,7 @@ const App = () => (
             <Route path="/products" element={<Products />} />
             <Route path="/check-ins" element={<CheckIns />} />
             <Route path="/workouts" element={<Workouts />} />
-            <Route path="/ai-assistant" element={<AiAssistantPage />} /> {/* 2. Adicione a nova rota */}
+            <Route path="/ai-assistant" element={<AiAssistantPage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/scheduling" element={<Scheduling />} />
           </Route>
