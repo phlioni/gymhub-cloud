@@ -1,5 +1,6 @@
 -- Dropar tabelas existentes se elas já foram criadas na ordem inversa para evitar erros de FK
 DROP TABLE IF EXISTS public.workout_exercises;
+DROP TABLE IF EXISTS public.workout_students; -- Renomeado de workout_assignments
 DROP TABLE IF EXISTS public.workouts;
 
 -- Tabela para armazenar os treinos (sem referência direta ao aluno)
@@ -17,8 +18,7 @@ CREATE TABLE public.workouts (
 );
 
 -- Tabela de associação (MUITOS-PARA-MUITOS entre workouts e students)
--- Um treino pode ter vários alunos, e um aluno pode ter vários treinos.
-CREATE TABLE public.workout_assignments (
+CREATE TABLE public.workout_students (
     workout_id UUID NOT NULL REFERENCES public.workouts(id) ON DELETE CASCADE,
     student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
     PRIMARY KEY (workout_id, student_id) -- Chave primária composta
@@ -39,27 +39,27 @@ CREATE TABLE public.workout_exercises (
 
 -- Habilita RLS
 ALTER TABLE public.workouts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.workout_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workout_students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workout_exercises ENABLE ROW LEVEL SECURITY;
 
--- Políticas de RLS para workouts (sem alterações na lógica principal)
+-- Políticas de RLS para workouts
 CREATE POLICY "Admins can view their organization's workouts" ON public.workouts FOR SELECT USING (organization_id = public.get_user_organization_id() OR public.is_superadmin());
 CREATE POLICY "Admins can insert workouts in their organization" ON public.workouts FOR INSERT WITH CHECK (organization_id = public.get_user_organization_id() OR public.is_superadmin());
 CREATE POLICY "Admins can update their organization's workouts" ON public.workouts FOR UPDATE USING (organization_id = public.get_user_organization_id() OR public.is_superadmin());
 CREATE POLICY "Admins can delete their organization's workouts" ON public.workouts FOR DELETE USING (organization_id = public.get_user_organization_id() OR public.is_superadmin());
 
--- Políticas de RLS para a nova tabela workout_assignments
+-- Políticas de RLS para a nova tabela workout_students
 CREATE POLICY "Admins can manage their org's workout assignments"
-  ON public.workout_assignments FOR ALL
+  ON public.workout_students FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM public.workouts w
-      WHERE w.id = workout_assignments.workout_id
+      WHERE w.id = workout_students.workout_id
       AND (w.organization_id = public.get_user_organization_id() OR public.is_superadmin())
     )
   );
 
--- Políticas de RLS para workout_exercises (sem alterações)
+-- Políticas de RLS para workout_exercises
 CREATE POLICY "Admins can manage exercises for their org's workouts"
   ON public.workout_exercises FOR ALL
   USING (

@@ -15,6 +15,7 @@ import AppLayout from "./components/AppLayout";
 import CheckIns from "./pages/CheckIns";
 import Scheduling from "./pages/Scheduling";
 import Workouts from "./pages/Workouts";
+import AiAssistantPage from "./pages/AiAssistant"; // <<< 1. Importar a nova página
 
 const queryClient = new QueryClient();
 
@@ -38,8 +39,9 @@ const App = () => (
             <Route path="/products" element={<Products />} />
             <Route path="/check-ins" element={<CheckIns />} />
             <Route path="/workouts" element={<Workouts />} />
+            <Route path="/ai-assistant" element={<AiAssistantPage />} /> {/* 2. Adicione a nova rota */}
             <Route path="/settings" element={<Settings />} />
-            <Route path="/scheduling" element={<Scheduling />} /> {/* 2. Adicione a nova rota */}
+            <Route path="/scheduling" element={<Scheduling />} />
           </Route>
 
           {/* Rota para páginas não encontradas */}

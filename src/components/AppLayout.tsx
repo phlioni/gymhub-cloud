@@ -13,10 +13,11 @@ import {
     GraduationCap,
     Package,
     Settings,
-    Dumbbell, // Manter Dumbbell
+    Dumbbell,
     CheckCheck,
     Calendar,
-    Weight, // <<< 1. Importar novo ícone para Treinos (ou outro de sua preferência)
+    Weight,
+    Bot, // <<< 1. Importar novo ícone para o Assistente
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -29,21 +30,21 @@ interface AppLayoutData {
     } | null;
 }
 
-// <<< 2. Adicionar "Treinos" à navegação
+// <<< 2. Adicionar "Assistente IA" à navegação
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Alunos", href: "/students", icon: Users },
     { name: "Modalidades", href: "/modalities", icon: GraduationCap },
     { name: "Produtos", href: "/products", icon: Package },
     { name: "Agendamentos", href: "/scheduling", icon: Calendar },
-    { name: "Treinos", href: "/workouts", icon: Weight }, // <<< Novo item aqui
+    { name: "Treinos", href: "/workouts", icon: Weight },
     { name: "Check-ins", href: "/check-ins", icon: CheckCheck },
+    { name: "Assistente IA", href: "/ai-assistant", icon: Bot }, // <<< Novo item aqui
     { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
 
 export default function AppLayout() {
-    // ... (resto do componente AppLayout permanece igual) ...
     const [data, setData] = useState<AppLayoutData | null>(null);
     const [loading, setLoading] = useState(true);
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -71,10 +72,7 @@ export default function AppLayout() {
                 throw new Error("Perfil incompleto ou organização não associada.");
             }
 
-            // Busca dados da organização apenas se necessário (ou se 'data' for null)
-            // Evita refetch desnecessário em navegação normal
             if (!data || !data.organization || data.organization === null) {
-                // setLoading(true); // Só ativa loading se for buscar ORG
                 const { data: orgData, error: orgError } = await supabase
                     .from("organizations")
                     .select("name, logo_url")
@@ -84,10 +82,9 @@ export default function AppLayout() {
                 if (orgError || !orgData) {
                     throw new Error(orgError?.message || "Organização não encontrada.");
                 }
-                // setLoading(false); // Desativa loading após buscar ORG
                 return { organization: orgData };
             }
-            return data; // Retorna os dados existentes
+            return data;
 
         } catch (error: any) {
             console.error("Erro ao verificar perfil/organização:", error.message);
@@ -101,11 +98,11 @@ export default function AppLayout() {
 
     useEffect(() => {
         let isMounted = true;
-        let authSubscription: AuthSubscription | null = null; // Variável para guardar a subscrição
+        let authSubscription: AuthSubscription | null = null;
 
         const initialize = async (session: Session | null) => {
             if (!isMounted) return;
-            setLoading(true); // Inicia loading na inicialização/login
+            setLoading(true);
 
             if (session?.user) {
                 setCurrentUser(session.user);
@@ -118,15 +115,12 @@ export default function AppLayout() {
                 setData(null);
                 navigate('/', { replace: true });
             }
-            if (isMounted) setLoading(false); // Finaliza loading após tentativa
+            if (isMounted) setLoading(false);
         };
 
-        // Verifica a sessão inicial e inicializa
         supabase.auth.getSession().then(({ data: { session } }) => {
             initialize(session);
 
-            // ----- MOVIDO PARA DENTRO do .then() -----
-            // Configura o listener APÓS verificar a sessão inicial
             const { data: listener } = supabase.auth.onAuthStateChange(
                 (event, session) => {
                     if (!isMounted) return;
@@ -134,40 +128,27 @@ export default function AppLayout() {
                     if (event === 'SIGNED_OUT') {
                         setCurrentUser(null);
                         setData(null);
-                        // A navegação para '/' acontece implicitamente ao desmontar/remontar
-                        // devido à falta de sessão na próxima verificação inicial.
-                        // Apenas mostramos o toast aqui.
                         toast.success("Você saiu com segurança.");
-                        // Forçar um estado de loading falso pode ajudar a evitar o skeleton flash
                         setLoading(false);
-                        navigate('/'); // Adicionado para garantir o redirecionamento imediato
+                        navigate('/');
 
                     } else if (event === 'SIGNED_IN' && session?.user) {
-                        // Reinicializa ao logar
                         initialize(session);
                     }
                 }
             );
-            authSubscription = listener.subscription; // Guarda a subscrição
-            // ----- FIM DO BLOCO MOVIDO -----
+            authSubscription = listener.subscription;
         });
 
-
-        // Função de limpeza
         return () => {
             isMounted = false;
-            // ----- CORREÇÃO APLICADA AQUI -----
-            // Verifica se a subscrição existe antes de cancelar
             if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
                 authSubscription.unsubscribe();
             }
-            // ----- FIM DA CORREÇÃO -----
         };
-    }, [navigate, checkUserProfileAndOrg]); // Removido 'data' da dependência para evitar re-execução excessiva
+    }, [navigate, checkUserProfileAndOrg]);
 
 
-    // ------ Renderização do Loading ------
-    // Mostra Skeleton APENAS se loading for true E não houver currentUser (no início)
     if (loading && !currentUser) {
         return (
             <div className="flex h-screen bg-muted/30">
@@ -180,19 +161,15 @@ export default function AppLayout() {
             </div>
         );
     }
-    // Se não está carregando E não tem usuário/data (após erro/logout), retorna null para o Router lidar
     if (!loading && (!currentUser || !data)) {
         return null;
     }
 
-    // ------ Renderização Principal ------
     return (
         <div className="flex min-h-screen w-full bg-muted/30">
-            {/* Passa a função para fechar o menu */}
             <DesktopSidebar data={data} setMobileMenuOpen={setMobileMenuOpen} />
 
             <div className="flex flex-col flex-1">
-                {/* Cabeçalho para Mobile */}
                 <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">
                     <Sheet open={isMobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                         <SheetTrigger asChild>
@@ -208,7 +185,6 @@ export default function AppLayout() {
                     <h1 className="text-lg font-semibold">{data?.organization?.name || "TreineAI"}</h1>
                 </header>
 
-                {/* Outlet para renderizar as páginas */}
                 <div className="flex-1 overflow-y-auto">
                     <Outlet />
                 </div>
@@ -217,35 +193,28 @@ export default function AppLayout() {
     );
 }
 
-// --- Componentes Internos (DesktopSidebar, MobileSidebar, SidebarContent) ---
-
-// Ajustado para receber setMobileMenuOpen
 const DesktopSidebar = ({ data, setMobileMenuOpen }: { data: AppLayoutData | null; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => (
     <aside className="hidden md:flex md:flex-col md:w-72 border-r bg-sidebar">
         <SidebarContent data={data} setMobileMenuOpen={setMobileMenuOpen} />
     </aside>
 );
 
-// Ajustado para receber setMobileMenuOpen
 const MobileSidebar = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayoutData | null; onLinkClick: () => void; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => (
     <nav className="flex h-full flex-col text-sm font-medium bg-sidebar">
-        {/* Passa setMobileMenuOpen para SidebarContent */}
         <SidebarContent data={data} onLinkClick={onLinkClick} setMobileMenuOpen={setMobileMenuOpen} />
     </nav>
 );
 
-// Ajustado para receber e usar setMobileMenuOpen
 const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayoutData | null; onLinkClick?: () => void; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
     const location = useLocation();
-    const navigate = useNavigate(); // useNavigate ainda é útil para o logout
+    const navigate = useNavigate();
 
     const handleSignOut = async () => {
-        setMobileMenuOpen(false); // Fecha o menu mobile primeiro
+        setMobileMenuOpen(false);
         const { error } = await supabase.auth.signOut();
         if (error) {
             toast.error("Falha ao sair: " + error.message);
         } else {
-            // A navegação será tratada pelo onAuthStateChange no AppLayout, mas podemos adicionar aqui para garantir
             navigate('/');
         }
     };
@@ -253,14 +222,13 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
     return (
         <>
             <div className="flex flex-col flex-1">
-                {/* Header da Sidebar */}
                 <div className="p-6 border-b border-sidebar-border bg-gradient-to-br from-primary/5 to-transparent">
                     <div className="flex items-center gap-3">
                         {data?.organization?.logo_url ? (
                             <img src={data.organization.logo_url} alt="Logo" className="h-12 w-12 rounded-xl object-cover shadow-md ring-2 ring-primary/10" />
                         ) : (
                             <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md">
-                                <Dumbbell className="h-7 w-7 text-white" /> {/* Manter Dumbbell aqui */}
+                                <Dumbbell className="h-7 w-7 text-white" />
                             </div>
                         )}
                         <div className="flex flex-col">
@@ -272,7 +240,6 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
                     </div>
                 </div>
 
-                {/* Navegação da Sidebar */}
                 <nav className="flex-1 px-4 py-4 space-y-1.5">
                     {navigation.map((item) => {
                         const isActive = location.pathname.startsWith(item.href);
@@ -280,7 +247,7 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
                             <Link
                                 key={item.name}
                                 to={item.href}
-                                onClick={onLinkClick} // Fecha o menu mobile ao clicar no link
+                                onClick={onLinkClick}
                                 className={cn(
                                     "group flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200",
                                     isActive
@@ -302,7 +269,6 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
                 </nav>
             </div>
 
-            {/* Footer da Sidebar */}
             <div className="p-4 border-t border-sidebar-border bg-gradient-to-t from-sidebar-accent/30 to-transparent">
                 <Button
                     variant="ghost"
