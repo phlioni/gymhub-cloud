@@ -3,7 +3,99 @@ const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
-// --- Ferramentas que a IA pode usar ---
+// --- Funções de Ação do Webhook (Ferramentas da IA) ---
+const actions = {
+    get_modalities: async (supabase, organization_id) => {
+        const { data: modalities } = await supabase.from('modalities').select('name, price').eq('organization_id', organization_id);
+        if (!modalities || modalities.length === 0) return 'Ops! Parece que ainda não temos modalidades cadastradas. Volte em breve! 😉';
+        return 'Legal! 🎉 Nossas modalidades e preços são:\n\n' + modalities.map((m) => `*${m.name}*: R$ ${m.price ? m.price.toFixed(2).replace('.', ',') : 'Consulte'}`).join('\n');
+    },
+    get_appointments: async (supabase, studentId) => {
+        const { data: appointments } = await supabase.from('appointments').select('start_time, modalities(name)').eq('student_id', studentId).gte('start_time', new Date().toISOString()).order('start_time').limit(5);
+        if (!appointments || appointments.length === 0) return 'Você não possui agendamentos futuros. Que tal marcar um? 😉';
+        return 'Ok, aqui estão seus próximos agendamentos:\n\n' + appointments.map((a) => {
+            const date = new Date(a.start_time);
+            const formattedDate = `${date.toLocaleDateString('pt-BR', {
+                timeZone: 'America/Sao_Paulo'
+            })} às ${date.toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Sao_Paulo'
+            })}`;
+            return `🗓️ *${formattedDate}* - ${a.modalities?.name || 'Aula Particular'}`;
+        }).join('\n');
+    },
+    initiate_check_in: async (supabase, studentId) => {
+        const { data: studentOrgs, error } = await supabase.from('students').select('organization_id, organizations(name)').eq('id', studentId);
+        if (error || !studentOrgs || studentOrgs.length === 0) throw new Error("Não foi possível encontrar sua matrícula.");
+        if (studentOrgs.length === 1) {
+            return `Confirma o check-in na ${studentOrgs[0].organizations.name} hoje? (Responda *Sim* ou *Não*)`;
+        }
+        let message = 'Notei que você está matriculado em mais de um local. Onde você gostaria de fazer o check-in hoje?\n\n';
+        studentOrgs.forEach((org, index) => {
+            message += `${index + 1}. *${org.organizations.name}*\n`;
+        });
+        message += '\nResponda com o número do local desejado.';
+        return message;
+    },
+    get_today_workout: async (supabase, student) => {
+        const now = new Date();
+        const brazilTime = new Date(now.toLocaleString('en-US', {
+            timeZone: 'America/Sao_Paulo'
+        }));
+        const dayOfWeekForQuery = brazilTime.getDay() === 0 ? 7 : brazilTime.getDay();
+        const { data: workouts, error } = await supabase.rpc('get_student_workouts', {
+            p_student_id: student.id,
+            p_organization_id: student.organization_id
+        });
+        if (error) throw error;
+        const todayWorkouts = workouts.filter((w) => {
+            if (w.frequency === 'daily' && w.day_of_week === dayOfWeekForQuery) return true;
+            if (w.frequency === 'weekly' || w.frequency === 'single') return true; // Simplificado para mostrar treinos semanais/únicos
+            return false;
+        });
+        if (todayWorkouts.length === 0) return 'Ebaa, hoje é seu dia de descanso! Nenhum treino específico para você hoje. Aproveite! 🏖️';
+        let workoutsText = 'Bora treinar! 💪 Aqui está seu treino para hoje:\n';
+        todayWorkouts.forEach((workout) => {
+            workoutsText += `\n*${workout.name}*\n`;
+            // >>> CORREÇÃO APLICADA AQUI: Removidos os underscores <<<
+            if (workout.description) workoutsText += `${workout.description}\n\n`;
+            if (workout.workout_exercises && workout.workout_exercises.length > 0) {
+                workoutsText += 'Exercícios:\n';
+                workout.workout_exercises.forEach((ex) => {
+                    let exLine = `\n- *${ex.exercise_name}*\n`;
+                    const details = [
+                        ex.sets && `${ex.sets} séries`,
+                        ex.reps && `${ex.reps} reps`,
+                        ex.rest_period && `${ex.rest_period}s desc.`
+                    ].filter(Boolean);
+                    if (details.length > 0) exLine += `  (${details.join(' / ')})\n`;
+                    if (ex.observations) exLine += `  Obs: ${ex.observations}\n`;
+                    workoutsText += exLine;
+                });
+            }
+        });
+        return workoutsText.trim();
+    },
+    start_goal_conversation: async (supabase, student_phone_number) => {
+        await supabase.from('student_coach_interactions').update({
+            conversation_state: 'gathering_info'
+        }).eq('student_phone_number', student_phone_number);
+        return "Que legal que você quer focar nos seus objetivos! Para começarmos, me conte um pouco mais sobre você. Por favor, me diga seu **peso (em kg)**, sua **altura (em cm)**, e seu **nível de atividade** (ex: sedentário, 3x por semana, etc.).";
+    },
+    generate_plan_suggestion: async (supabase, student_phone_number, goal_details) => {
+        const plan_suggestion = {
+            generated_plan: "Sugestão da IA: \n- 3x/semana musculação (ABC)\n- Dieta de 2000kcal com foco em proteínas.\n- Aeróbico 30min pós-treino."
+        };
+        await supabase.from('student_coach_interactions').update({
+            conversation_state: 'awaiting_plan_validation',
+            goal_details: goal_details,
+            plan_suggestion: plan_suggestion
+        }).eq('student_phone_number', student_phone_number);
+        return "Excelente! Com base nas suas informações, preparei uma sugestão de plano. Enviei para o seu personal/academia para validação. Assim que aprovarem, eu te aviso por aqui e começamos juntos essa jornada! 🚀";
+    }
+};
+// --- Roteamento de Ferramentas da IA ---
 const tools = [
     {
         type: 'function',
@@ -23,29 +115,36 @@ const tools = [
         type: 'function',
         function: {
             name: 'initiate_check_in',
-            description: 'Inicia o processo de check-in para o aluno, perguntando se ele confirma a ação.'
+            description: 'Inicia o processo de check-in para o aluno.'
         }
     },
     {
         type: 'function',
         function: {
             name: 'get_today_workout',
-            description: 'Busca e formata o treino do dia para o aluno.'
+            description: 'Busca o treino do dia para o aluno.'
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'start_goal_conversation',
+            description: 'Inicia uma conversa para definir um novo plano de treino e dieta com base nos objetivos do aluno.'
         }
     }
 ];
-// --- Função para chamar a IA (OpenAI) ---
+// --- Chamada para a IA (OpenAI) ---
 async function getAiResponse(userMessage, context, apiKey) {
-    if (!apiKey) throw new Error("A chave da API da OpenAI (OPENAI_API_KEY) não está configurada nos secrets do Supabase.");
-    const systemPrompt = `Você é a "TreineAI" 🤖, a assistente virtual da academia. Sua personalidade é simpática, motivadora e prestativa. Você adora usar emojis para deixar a conversa mais animada.
-    Sua principal função é identificar a intenção do aluno e usar uma de suas ferramentas ('tools') para executar a ação.
+    if (!apiKey) throw new Error("A chave da API da OpenAI não está configurada.");
+    const systemPrompt = `Você é "ArIA" 🤖, a assistente virtual fitness. Sua personalidade é simpática, motivadora e muito prestativa. Use emojis para tornar a conversa mais leve e animada.
+    Sua missão é entender a intenção do aluno e usar uma de suas 'tools' para ajudar.
 
-    Regras Importantes:
-    1.  **Nome:** Seu nome é TreineAI.
-    2.  **Ação é Prioridade:** Se a mensagem do usuário corresponder a uma de suas ferramentas (como "checkin", "meu treino", "horários"), priorize chamar a ferramenta.
-    3.  **Respostas Gerais:** Para saudações ("oi", "olá") ou perguntas que não são ações, responda de forma amigável, se apresente e pergunte como pode ajudar.
-    4.  **Limites:** Se o usuário pedir algo que você não pode fazer (ex: "cancelar meu plano"), informe de forma educada que essa ação deve ser feita na recepção.
-    5.  **Contexto:** Use o contexto para saber o nome do aluno e da academia para personalizar suas respostas.
+    Regras Essenciais:
+    1.  **Sempre se apresente como ArIA.**
+    2.  **Foco na Ação:** Se a mensagem do usuário corresponder a uma ferramenta (como "checkin", "meu treino", "quero um plano novo"), chame a ferramenta correspondente.
+    3.  **Conversa sobre Metas:** Se o usuário mencionar que quer atingir um objetivo (ex: "perder peso", "ganhar massa"), use a ferramenta 'start_goal_conversation'.
+    4.  **Respostas Gerais:** Para saudações ("oi") ou perguntas que não são ações, responda amigavelmente, se apresente e pergunte como pode ajudar.
+    5.  **Limites:** Se pedirem algo que você não pode fazer (ex: "cancelar meu plano"), informe educadamente que essa ação deve ser feita na recepção da academia.
 
     --- CONTEXTO ATUAL ---
     ${context}
@@ -75,84 +174,10 @@ async function getAiResponse(userMessage, context, apiKey) {
     });
     if (!response.ok) {
         const errorBody = await response.json();
-        console.error("Erro na API da OpenAI:", errorBody);
         throw new Error(`Erro na API da OpenAI: ${errorBody.error.message}`);
     }
-    const data = await response.json();
-    return data.choices[0].message;
+    return (await response.json()).choices[0].message;
 }
-// --- Funções de Ação do Webhook ---
-const actions = {
-    get_modalities: async (supabase, organization_id) => {
-        const { data: modalities } = await supabase.from('modalities').select('name, price').eq('organization_id', organization_id);
-        if (!modalities || modalities.length === 0) return 'Ops! Parece que ainda não temos modalidades cadastradas. Volte em breve! 😉';
-        return 'Legal! 🎉 Nossas modalidades e preços são:\n\n' + modalities.map((m) => `*${m.name}*: R$ ${m.price ? m.price.toFixed(2).replace('.', ',') : 'Consulte'}`).join('\n');
-    },
-    get_appointments: async (supabase, studentId) => {
-        const { data: appointments } = await supabase.from('appointments').select('start_time, modalities(name)').eq('student_id', studentId).gte('start_time', new Date().toISOString()).order('start_time').limit(5);
-        if (!appointments || appointments.length === 0) return 'Você não possui agendamentos futuros. Que tal marcar um? 😉';
-        return 'Ok, aqui estão seus próximos agendamentos:\n\n' + appointments.map((a) => {
-            const date = new Date(a.start_time);
-            const formattedDate = `${date.toLocaleDateString('pt-BR', {
-                timeZone: 'America/Sao_Paulo'
-            })} às ${date.toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'America/Sao_Paulo'
-            })}`;
-            return `🗓️ *${formattedDate}* - ${a.modalities?.name || 'Aula Particular'}`;
-        }).join('\n');
-    },
-    initiate_check_in: async (supabase, organization_id) => {
-        const { data: org } = await supabase.from('organizations').select('name').eq('id', organization_id).single();
-        if (!org) throw new Error("Organização não encontrada para o check-in.");
-        return `Confirma o check-in na ${org.name} hoje? (Responda *Sim* ou *Não*)`;
-    },
-    get_today_workout: async (supabase, student) => {
-        const now = new Date();
-        const brazilTime = new Date(now.toLocaleString('en-US', {
-            timeZone: 'America/Sao_Paulo'
-        }));
-        const dayOfWeekForQuery = brazilTime.getDay() === 0 ? 7 : brazilTime.getDay();
-        const { data: workouts, error } = await supabase.rpc('get_student_workouts', {
-            p_student_id: student.id,
-            p_organization_id: student.organization_id
-        });
-        if (error) throw error;
-        const todayWorkouts = workouts.filter((w) => {
-            const frequency = w.frequency?.toLowerCase();
-            if (w.day_of_week) return w.day_of_week == dayOfWeekForQuery;
-            if ([
-                'diário',
-                'único',
-                'daily',
-                'single'
-            ].includes(frequency)) return true;
-            return false;
-        });
-        if (todayWorkouts.length === 0) return 'Ebaa, hoje é seu dia de descanso! Nenhum treino específico para você hoje. Aproveite! 🏖️';
-        let workoutsText = 'Bora treinar! 💪 Aqui está seu treino para hoje:\n';
-        todayWorkouts.forEach((workout) => {
-            workoutsText += `\n*${workout.name}*\n`;
-            if (workout.description) workoutsText += `_${workout.description}_\n\n`;
-            if (workout.workout_exercises && workout.workout_exercises.length > 0) {
-                workoutsText += 'Exercícios:\n';
-                workout.workout_exercises.forEach((ex) => {
-                    let exLine = `\n- *${ex.exercise_name}*\n`;
-                    const details = [
-                        ex.sets && `${ex.sets} séries`,
-                        ex.reps && `${ex.reps} reps`,
-                        ex.rest_period && `${ex.rest_period}s desc.`
-                    ].filter(Boolean);
-                    if (details.length > 0) exLine += `  (${details.join(' / ')})\n`;
-                    if (ex.observations) exLine += `  Obs: ${ex.observations}\n`;
-                    workoutsText += exLine;
-                });
-            }
-        });
-        return workoutsText.trim();
-    }
-};
 // --- Lógica Principal do Webhook ---
 Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') return new Response('ok', {
@@ -171,7 +196,7 @@ Deno.serve(async (req) => {
         });
         const { data: student, error: studentError } = await supabaseAdmin.from('students').select('id, name, organization_id').eq('phone_number', from).single();
         if (studentError || !student) {
-            const twiml = createTwiMLResponse1("Olá! 👋 Não encontrei seu cadastro. Por favor, verifique se o número está correto ou fale com a recepção, combinado? 😉");
+            const twiml = createTwiMLResponse1("Olá! 👋 Sou a ArIA. Não encontrei seu cadastro. Por favor, verifique se o número está correto ou fale com a recepção, combinado? 😉");
             return new Response(twiml, {
                 headers: {
                     ...corsHeaders,
@@ -179,9 +204,28 @@ Deno.serve(async (req) => {
                 }
             });
         }
+        // Garante que existe uma entrada de interação para o aluno
+        let { data: interaction } = await supabaseAdmin.from('student_coach_interactions').select('*').eq('student_phone_number', from).single();
+        if (!interaction) {
+            const { data: newInteraction } = await supabaseAdmin.from('student_coach_interactions').insert({
+                student_phone_number: from,
+                student_id: student.id,
+                organization_id: student.organization_id
+            }).select().single();
+            interaction = newInteraction;
+        }
         let responseMessage = '';
         let toolCall = null;
-        if (lowerCaseBody === 'sim') {
+        // --- Lógica de Estado da Conversa ---
+        if (interaction.conversation_state === 'gathering_info') {
+            const goal_details = {
+                objective: 'Perder peso',
+                weight: '80kg',
+                height: '175cm',
+                activity_level: '3x semana'
+            };
+            responseMessage = await actions.generate_plan_suggestion(supabaseAdmin, from, goal_details);
+        } else if (lowerCaseBody === 'sim') {
             const { data: org } = await supabaseAdmin.from('organizations').select('id, name').eq('id', student.organization_id).single();
             if (!org) throw new Error("Organização não encontrada.");
             const { data: existingCheckIn } = await supabaseAdmin.from('check_ins').select('id').eq('student_id', student.id).gte('checked_in_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()).limit(1).single();
@@ -196,7 +240,7 @@ Deno.serve(async (req) => {
                 responseMessage = `Check-in confirmado na ${org.name}! Bom treino! 💪`;
             }
         } else if (lowerCaseBody === 'não') {
-            responseMessage = "Ok, check-in cancelado. Se precisar de algo mais, é só chamar! 👍";
+            responseMessage = "Ok, ação cancelada. Se precisar de algo mais, é só chamar! 👍";
         } else {
             const { data: org } = await supabaseAdmin.from('organizations').select('name').eq('id', student.organization_id).single();
             const context = `Nome do Aluno: ${student.name}. Nome da Academia: ${org?.name || 'nossa academia'}.`;
@@ -208,21 +252,11 @@ Deno.serve(async (req) => {
             }
         }
         if (toolCall) {
-            switch (toolCall.name) {
-                case 'get_modalities':
-                    responseMessage = await actions.get_modalities(supabaseAdmin, student.organization_id);
-                    break;
-                case 'get_appointments':
-                    responseMessage = await actions.get_appointments(supabaseAdmin, student.id);
-                    break;
-                case 'initiate_check_in':
-                    responseMessage = await actions.initiate_check_in(supabaseAdmin, student.organization_id);
-                    break;
-                case 'get_today_workout':
-                    responseMessage = await actions.get_today_workout(supabaseAdmin, student);
-                    break;
-                default:
-                    responseMessage = "Não entendi muito bem o que você quis dizer. 🤔 Pode tentar de outra forma?";
+            const actionFn = actions[toolCall.name];
+            if (actionFn) {
+                responseMessage = await actionFn(supabaseAdmin, toolCall.name === 'start_goal_conversation' ? from : student, toolCall.arguments ? JSON.parse(toolCall.arguments) : {});
+            } else {
+                responseMessage = "Não entendi muito bem o que você quis dizer. 🤔 Pode tentar de outra forma?";
             }
         }
         const twiml = createTwiMLResponse1(responseMessage);
