@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-// >>>>> CORREÇÃO AQUI: Adicionado 'Check' à importação <<<<<
 import { PlusCircle, Trash2, GripVertical, Save, X, ChevronsUpDown, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -25,15 +24,17 @@ const weekDays = [
 
 type WorkoutExerciseData = Omit<Tables<'workout_exercises'>, 'workout_id' | 'created_at'> & { tempId: string };
 
+// Adicionado student_phone_number para o fluxo da IA
+type WorkoutDataForDialog = WorkoutWithDetails & { student_phone_number?: string | null };
+
 interface AddEditWorkoutDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     organizationId: string | null;
-    workoutData: WorkoutWithDetails | null;
+    workoutData: WorkoutDataForDialog | null;
     onSuccess: () => void;
 }
 
-// Componente MultiSelect para Alunos
 const MultiSelectStudents = ({
     allStudents,
     selected,
@@ -172,7 +173,7 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
             {
                 tempId: `temp-${exercises.length}-${Date.now()}`,
                 exercise_name: "", sets: null, reps: null, rest_period: null, observations: null,
-                order_index: exercises.length, id: undefined, created_at: new Date().toISOString()
+                order_index: exercises.length, id: '',
             },
         ]);
     };
@@ -282,7 +283,23 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
                 if (deleteError) throw deleteError;
             }
 
-            toast.success(`Treino ${workoutData ? 'atualizado' : 'criado'}!`);
+            // >>> NOVO: LÓGICA DE NOTIFICAÇÃO E LIMPEZA <<<
+            if (workoutData?.student_phone_number) {
+                // Limpa o estado de pendência na tabela de interações
+                await supabase
+                    .from('student_coach_interactions')
+                    .update({ conversation_state: 'idle', plan_suggestion: null })
+                    .eq('student_phone_number', workoutData.student_phone_number);
+
+                // Envia a notificação para o aluno
+                const message = `Boas notícias! ✨\n\nSeu novo plano de treino "${workoutName}" foi aprovado pelo seu instrutor.\n\nVocê já pode consultá-lo digitando "meu treino" aqui. Vamos com tudo! 💪`;
+                await supabase.functions.invoke('notify-student', {
+                    body: { to: workoutData.student_phone_number, message: message },
+                });
+            }
+            // >>> FIM DA NOVA LÓGICA <<<
+
+            toast.success(`Treino ${workoutData ? 'atualizado' : 'criado'} com sucesso!`);
             onSuccess();
             onOpenChange(false);
 
@@ -348,7 +365,7 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
                                     <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7 text-destructive hover:bg-destructive/10 opacity-50 group-hover:opacity-100 transition-opacity" onClick={() => removeExercise(exercise.tempId)} disabled={loading} title="Remover exercício"><Trash2 className="h-4 w-4" /></Button>
                                     <div className="space-y-2 pl-6">
                                         <Label htmlFor={`exName-${exercise.tempId}`}>Exercício *</Label>
-                                        <Input id={`exName-${exercise.tempId}`} value={exercise.exercise_name} onChange={(e) => updateExercise(exercise.tempId, 'exercise_name', e.target.value)} required placeholder="Ex: Supino Reto com Barra" disabled={loading} />
+                                        <Input id={`exName-${exercise.tempId}`} value={exercise.exercise_name || ''} onChange={(e) => updateExercise(exercise.tempId, 'exercise_name', e.target.value)} required placeholder="Ex: Supino Reto com Barra" disabled={loading} />
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pl-6">
                                         <div className="space-y-2">
