@@ -180,13 +180,13 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditClick(student)}>
+                              <DropdownMenuItem onSelect={() => handleEditClick(student)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>Editar</span>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => handleDelete(student.id)}
+                                onSelect={() => handleDelete(student.id)}
                                 className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -229,17 +229,17 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleHistoryClick(student.id)}>
+                        <DropdownMenuItem onSelect={() => handleHistoryClick(student.id)}>
                           <History className="mr-2 h-4 w-4" />
                           <span>Histórico</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditClick(student)}>
+                        <DropdownMenuItem onSelect={() => handleEditClick(student)}>
                           <Edit className="mr-2 h-4 w-4" />
                           <span>Editar</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() => handleDelete(student.id)}
+                          onSelect={() => handleDelete(student.id)}
                           className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />

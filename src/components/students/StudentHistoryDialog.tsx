@@ -5,9 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Camera, Utensils, Dumbbell, Trophy, Weight } from "lucide-react";
 
 interface StudentHistoryDialogProps {
@@ -79,8 +78,9 @@ export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentH
                     <DialogTitle>Histórico e Evolução de {studentName}</DialogTitle>
                     <DialogDescription>Acompanhe o progresso e todas as interações do aluno.</DialogDescription>
                 </DialogHeader>
-                <div className="grid md:grid-cols-2 gap-6 py-4 flex-1 min-h-0">
-                    <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row gap-6 py-4 flex-1 min-h-0">
+                    {/* Coluna da Linha do Tempo */}
+                    <div className="flex flex-col gap-4 md:w-1/2">
                         <h3 className="font-semibold">Linha do Tempo</h3>
                         <ScrollArea className="flex-1 pr-4 -mr-4">
                             {loading && <Skeleton className="h-48 w-full" />}
@@ -105,9 +105,10 @@ export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentH
                             </div>
                         </ScrollArea>
                     </div>
-                    <div className="flex flex-col gap-4">
+                    {/* Coluna do Gráfico */}
+                    <div className="flex flex-col gap-4 md:w-1/2">
                         <h3 className="font-semibold">Gráfico de Evolução (Peso)</h3>
-                        <div className="flex-1 rounded-lg border p-4">
+                        <div className="flex-1 rounded-lg border p-4 min-h-[300px] md:min-h-0">
                             {loading && <Skeleton className="h-full w-full" />}
                             {!loading && weightData.length < 2 && <div className="flex items-center justify-center h-full"><p className="text-sm text-muted-foreground">Dados insuficientes para gerar o gráfico.</p></div>}
                             {weightData.length >= 2 && (
