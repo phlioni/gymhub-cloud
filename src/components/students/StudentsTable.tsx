@@ -4,7 +4,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Edit, Trash2, CalendarClock, Bell, BellOff, Zap, CheckCircle, History } from "lucide-react";
+import { Edit, Trash2, CalendarClock, Bell, BellOff, Zap, CheckCircle, History, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EditStudentDialog } from "./EditStudentDialog";
@@ -158,19 +165,36 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                           {!isGympass && !isTotalPass && !isAutomationActive && (<span className="text-xs text-muted-foreground">N/A</span>)}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button variant="outline" size="sm" onClick={() => handleHistoryClick(student.id)}>
-                          <History className="h-4 w-4 mr-2" /> Histórico
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
-                          <CalendarClock className="h-4 w-4 mr-2" /> Renovar
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(student)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleHistoryClick(student.id)}>
+                            <History className="h-4 w-4 mr-2" /> Histórico
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
+                            <CalendarClock className="h-4 w-4 mr-2" /> Renovar
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditClick(student)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Editar</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(student.id)}
+                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Excluir</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -197,10 +221,32 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                     <h3 className="font-semibold">{student.name}</h3>
                     <p className="text-sm text-muted-foreground">{student.phone_number || "Sem telefone"}</p>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleHistoryClick(student.id)}><History className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(student)}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <div className="flex">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleHistoryClick(student.id)}>
+                          <History className="mr-2 h-4 w-4" />
+                          <span>Histórico</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(student)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          <span>Editar</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(student.id)}
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Excluir</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
                 <div className="mt-4 space-y-2">
