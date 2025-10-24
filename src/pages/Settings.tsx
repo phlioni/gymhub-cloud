@@ -1,24 +1,24 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client"; // Importa o cliente Supabase
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, Info, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle } from "lucide-react"; // Adicionado HelpCircle
+import { Upload, Info, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle, XCircle, PlusCircle, Save } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { IntegrationHelpDialog } from "@/components/IntegrationHelpDialog"; // <-- Importar o novo modal
+import { IntegrationHelpDialog } from "@/components/IntegrationHelpDialog";
 
-// Obter a URL base do Supabase diretamente do cliente inicializado
 const SUPABASE_URL = supabase.supabaseUrl;
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [savingAutomations, setSavingAutomations] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingIntegrations, setSavingIntegrations] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -31,12 +31,14 @@ const Settings = () => {
     businessHours: "",
     logoUrl: "",
     organizationType: "",
+    paymentDetails: "",
   });
+  const [reminderDays, setReminderDays] = useState<number[]>([3, 1]);
   const [integrationData, setIntegrationData] = useState({
-    gympassApiKey: "", // Secret
-    gympassIntegrationCode: "", // Gym ID (string no state)
-    totalpassApiKey: "", // Secret
-    totalpassIntegrationCode: "", // Código Alfanumérico
+    gympassApiKey: "",
+    gympassIntegrationCode: "",
+    totalpassApiKey: "",
+    totalpassIntegrationCode: "",
     webhookUrl: `${SUPABASE_URL}/functions/v1/checkin-integration`,
   });
   const [passwordData, setPasswordData] = useState({
@@ -44,11 +46,8 @@ const Settings = () => {
     confirmPassword: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // --- NOVO ESTADO PARA OS MODAIS DE AJUDA ---
   const [isGympassHelpOpen, setGympassHelpOpen] = useState(false);
   const [isTotalPassHelpOpen, setTotalPassHelpOpen] = useState(false);
-  // --- FIM NOVO ESTADO ---
 
   useEffect(() => {
     loadOrganizationData();
@@ -63,7 +62,7 @@ const Settings = () => {
         setOrganizationId(profile.organization_id);
         const { data: orgData } = await supabase
           .from('organizations')
-          .select('*, organization_type, gympass_api_key, gympass_integration_code, totalpass_api_key, totalpass_integration_code')
+          .select('*')
           .eq('id', profile.organization_id)
           .single();
         if (orgData) {
@@ -75,7 +74,9 @@ const Settings = () => {
             businessHours: orgData.business_hours || "",
             logoUrl: orgData.logo_url || "",
             organizationType: orgData.organization_type || "Academia",
+            paymentDetails: orgData.payment_details || "",
           });
+          setReminderDays(orgData.reminder_days || [3, 1]);
           setIntegrationData({
             gympassApiKey: orgData.gympass_api_key || "",
             gympassIntegrationCode: orgData.gympass_integration_code ? String(orgData.gympass_integration_code) : "",
@@ -107,20 +108,15 @@ const Settings = () => {
       toast.success("Logo enviado com sucesso");
     } catch (error: any) {
       toast.error("Falha ao enviar o logo.");
-      console.error(error);
     } finally {
       setUploading(false);
     }
   };
 
-
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organizationId) {
-      toast.error("ID da organização não encontrado.");
-      return;
-    }
-    setSaving(true);
+    if (!organizationId) return;
+    setSavingDetails(true);
     try {
       const { error } = await supabase.from('organizations').update({
         name: formData.name,
@@ -129,22 +125,39 @@ const Settings = () => {
         phone_number: formData.phoneNumber,
         business_hours: formData.businessHours,
         organization_type: formData.organizationType,
+        payment_details: formData.paymentDetails,
       }).eq('id', organizationId);
       if (error) throw error;
-      toast.success("Configurações salvas com sucesso!");
+      toast.success("Detalhes salvos com sucesso!");
     } catch (error: any) {
-      toast.error(error.message || "Falha ao salvar as configurações");
+      toast.error(error.message || "Falha ao salvar os detalhes");
     } finally {
-      setSaving(false);
+      setSavingDetails(false);
+    }
+  };
+
+  const handleAutomationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organizationId) return;
+    setSavingAutomations(true);
+    try {
+      const validDays = [...new Set(reminderDays.map(d => Number(d)).filter(d => d > 0))].sort((a, b) => b - a);
+      const { error } = await supabase.from('organizations').update({
+        reminder_days: validDays,
+      }).eq('id', organizationId);
+      if (error) throw error;
+      setReminderDays(validDays);
+      toast.success("Configurações de automação salvas!");
+    } catch (error: any) {
+      toast.error(error.message || "Falha ao salvar automações.");
+    } finally {
+      setSavingAutomations(false);
     }
   };
 
   const handleIntegrationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organizationId) {
-      toast.error("ID da organização não encontrado.");
-      return;
-    }
+    if (!organizationId) return;
     setSavingIntegrations(true);
     try {
       const { error } = await supabase.from('organizations').update({
@@ -161,7 +174,6 @@ const Settings = () => {
       setSavingIntegrations(false);
     }
   };
-
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,12 +198,18 @@ const Settings = () => {
     }
   };
 
+  const handleReminderDayChange = (index: number, value: string) => {
+    const newDays = [...reminderDays];
+    newDays[index] = Number(value);
+    setReminderDays(newDays);
+  };
+  const addReminderDay = () => setReminderDays([...reminderDays, 1]);
+  const removeReminderDay = (index: number) => setReminderDays(reminderDays.filter((_, i) => i !== index));
 
   return (
-    <> {/* <-- Adicionar Fragment para envolver tudo */}
+    <>
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto space-y-6 w-full">
-          {/* Header da Página */}
           <div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Configurações
@@ -229,21 +247,16 @@ const Settings = () => {
                           <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}><Upload className="mr-2 h-4 w-4" />{uploading ? "Enviando..." : "Enviar Logo"}</Button>
                         </div>
                       </div>
-                      {/* Nome */}
-                      <div className="space-y-2"><Label htmlFor="name">Nome *</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={saving} /></div>
-
-                      {/* Tipo de Organização */}
+                      <div className="space-y-2"><Label htmlFor="name">Nome *</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={savingDetails} /></div>
                       <div className="space-y-2">
                         <Label htmlFor="organizationType">Tipo de Organização *</Label>
                         <Select
                           value={formData.organizationType}
                           onValueChange={(value) => setFormData({ ...formData, organizationType: value })}
                           required
-                          disabled={saving}
+                          disabled={savingDetails}
                         >
-                          <SelectTrigger id="organizationType">
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
+                          <SelectTrigger id="organizationType"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Academia">Academia</SelectItem>
                             <SelectItem value="Centro de Treinamento">Centro de Treinamento</SelectItem>
@@ -251,24 +264,18 @@ const Settings = () => {
                           </SelectContent>
                         </Select>
                       </div>
-
-                      {/* Endereço */}
-                      <div className="space-y-2"><Label htmlFor="address">Endereço</Label><Textarea id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} disabled={saving} rows={3} /></div>
-                      {/* Nome Responsável */}
-                      <div className="space-y-2"><Label htmlFor="ownerName">Nome do Responsável</Label><Input id="ownerName" value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} disabled={saving} /></div>
-                      {/* Telefone */}
-                      <div className="space-y-2"><Label htmlFor="phoneNumber">Telefone</Label><Input id="phoneNumber" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={saving} /></div>
-                      {/* Horário */}
-                      <div className="space-y-2"><Label htmlFor="businessHours">Horário de Funcionamento</Label><Textarea id="businessHours" value={formData.businessHours} onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" disabled={saving} rows={3} /></div>
-                      {/* Botão Salvar */}
-                      <div className="flex justify-end pt-4"><Button type="submit" disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar Alterações"}</Button></div>
+                      <div className="space-y-2"><Label htmlFor="address">Endereço</Label><Textarea id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} disabled={savingDetails} rows={3} /></div>
+                      <div className="space-y-2"><Label htmlFor="paymentDetails">Chave PIX ou Link de Pagamento</Label><Input id="paymentDetails" value={formData.paymentDetails} onChange={(e) => setFormData({ ...formData, paymentDetails: e.target.value })} disabled={savingDetails} placeholder="Insira sua chave PIX ou o link para pagamento" /></div>
+                      <div className="space-y-2"><Label htmlFor="ownerName">Nome do Responsável</Label><Input id="ownerName" value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} disabled={savingDetails} /></div>
+                      <div className="space-y-2"><Label htmlFor="phoneNumber">Telefone</Label><Input id="phoneNumber" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={savingDetails} /></div>
+                      <div className="space-y-2"><Label htmlFor="businessHours">Horário de Funcionamento</Label><Textarea id="businessHours" value={formData.businessHours} onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" disabled={savingDetails} rows={3} /></div>
+                      <div className="flex justify-end pt-4"><Button type="submit" disabled={savingDetails || uploading}>{savingDetails ? "Salvando..." : "Salvar Alterações"}</Button></div>
                     </form>
                   </CardContent>
                 </Card>
               )}
             </TabsContent>
 
-            {/* ABA DE INTEGRAÇÕES */}
             <TabsContent value="integrations">
               <Card className="mt-4">
                 <CardHeader>
@@ -277,85 +284,96 @@ const Settings = () => {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleIntegrationSubmit} className="space-y-6">
-                    {/* Webhook URL */}
                     <div className="space-y-2">
                       <Label htmlFor="webhookUrl">Webhook URL (Seu Endpoint de Integração)</Label>
                       <Input id="webhookUrl" value={integrationData.webhookUrl} readOnly className="font-mono bg-muted" title="Copie este URL e cole no portal de integração do Gympass/TotalPass" />
                       <p className="text-xs text-muted-foreground">Este é o endereço do seu sistema que deve ser configurado no portal das plataformas para receber os pedidos de check-in.</p>
                     </div>
                     <Separator />
-
-                    {/* GYMPASS/WELLHUB */}
                     <div className="space-y-4 border p-4 rounded-lg">
-                      <div className="flex justify-between items-center"> {/* <-- Container para Título e Botão */}
+                      <div className="flex justify-between items-center">
                         <h4 className="font-semibold text-lg flex items-center gap-2 text-green-600"><CheckCircle className="h-5 w-5" /> Gympass (Wellhub)</h4>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setGympassHelpOpen(true)}> {/* <-- Botão de Ajuda */}
-                          <HelpCircle className="h-4 w-4 mr-1.5" /> Como Configurar?
-                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setGympassHelpOpen(true)}><HelpCircle className="h-4 w-4 mr-1.5" /> Como Configurar?</Button>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="gympassApiKey">Chave Secreta do Webhook (Secret) * <Key className="h-4 w-4 inline text-muted-foreground" /></Label>
-                        <Input
-                          id="gympassApiKey"
-                          value={integrationData.gympassApiKey}
-                          onChange={(e) => setIntegrationData({ ...integrationData, gympassApiKey: e.target.value })}
-                          placeholder="Chave secreta configurada no Supabase (GYMPASS_WEBHOOK_SECRET)"
-                          disabled={savingIntegrations}
-                          type="password"
-                        />
+                        <Input id="gympassApiKey" value={integrationData.gympassApiKey} onChange={(e) => setIntegrationData({ ...integrationData, gympassApiKey: e.target.value })} placeholder="Chave secreta configurada no Supabase (GYMPASS_WEBHOOK_SECRET)" disabled={savingIntegrations} type="password" />
                         <p className="text-xs text-muted-foreground">Esta chave é usada para verificar a assinatura do webhook. Deve ser a mesma configurada no Supabase.</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="gympassIntegrationCode">ID da Academia (Gym ID) * <KeySquare className="h-4 w-4 inline text-muted-foreground" /></Label>
-                        <Input
-                          id="gympassIntegrationCode"
-                          type="number"
-                          value={integrationData.gympassIntegrationCode}
-                          onChange={(e) => setIntegrationData({ ...integrationData, gympassIntegrationCode: e.target.value })}
-                          placeholder="ID Numérico da sua unidade no Gympass"
-                          disabled={savingIntegrations}
-                        />
+                        <Input id="gympassIntegrationCode" type="number" value={integrationData.gympassIntegrationCode} onChange={(e) => setIntegrationData({ ...integrationData, gympassIntegrationCode: e.target.value })} placeholder="ID Numérico da sua unidade no Gympass" disabled={savingIntegrations} />
                         <p className="text-xs text-muted-foreground">Este é o ID numérico da sua academia/unidade no portal Gympass/Wellhub.</p>
                       </div>
                     </div>
-
-                    {/* TOTALPASS */}
                     <div className="space-y-4 border p-4 rounded-lg">
-                      <div className="flex justify-between items-center"> {/* <-- Container para Título e Botão */}
+                      <div className="flex justify-between items-center">
                         <h4 className="font-semibold text-lg flex items-center gap-2 text-blue-600"><CheckCircle className="h-5 w-5" /> TotalPass</h4>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setTotalPassHelpOpen(true)}> {/* <-- Botão de Ajuda */}
-                          <HelpCircle className="h-4 w-4 mr-1.5" /> Como Configurar?
-                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setTotalPassHelpOpen(true)}><HelpCircle className="h-4 w-4 mr-1.5" /> Como Configurar?</Button>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="totalpassApiKey">Chave Secreta do Webhook (Secret) * <Key className="h-4 w-4 inline text-muted-foreground" /></Label>
-                        <Input
-                          id="totalpassApiKey"
-                          value={integrationData.totalpassApiKey}
-                          onChange={(e) => setIntegrationData({ ...integrationData, totalpassApiKey: e.target.value })}
-                          placeholder="Chave secreta para validação do webhook TotalPass"
-                          disabled={savingIntegrations}
-                          type="password"
-                        />
+                        <Input id="totalpassApiKey" value={integrationData.totalpassApiKey} onChange={(e) => setIntegrationData({ ...integrationData, totalpassApiKey: e.target.value })} placeholder="Chave secreta para validação do webhook TotalPass" disabled={savingIntegrations} type="password" />
                         <p className="text-xs text-muted-foreground">Esta chave é usada para verificar a assinatura do webhook. Deve ser a mesma configurada no Supabase.</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="totalpassIntegrationCode">Código de Integração *</Label>
-                        <Input
-                          id="totalpassIntegrationCode"
-                          value={integrationData.totalpassIntegrationCode}
-                          onChange={(e) => setIntegrationData({ ...integrationData, totalpassIntegrationCode: e.target.value })}
-                          placeholder="Código da Academia/Unidade no TotalPass (Alfanumérico)"
-                          disabled={savingIntegrations}
-                        />
+                        <Input id="totalpassIntegrationCode" value={integrationData.totalpassIntegrationCode} onChange={(e) => setIntegrationData({ ...integrationData, totalpassIntegrationCode: e.target.value })} placeholder="Código da Academia/Unidade no TotalPass (Alfanumérico)" disabled={savingIntegrations} />
                         <p className="text-xs text-muted-foreground">Este é o código alfanumérico da sua unidade no portal TotalPass.</p>
                       </div>
                     </div>
-
-                    {/* Botão Salvar Integrações */}
                     <div className="flex justify-end pt-4">
-                      <Button type="submit" disabled={savingIntegrations}>
-                        {savingIntegrations ? "Salvando..." : "Salvar Integrações"}
+                      <Button type="submit" disabled={savingIntegrations}>{savingIntegrations ? "Salvando..." : "Salvar Integrações"}</Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="automation">
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" />Automação de Lembretes de Vencimento</CardTitle>
+                  <CardDescription>Configure quando os lembretes de renovação devem ser enviados via WhatsApp.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleAutomationSubmit} className="space-y-6">
+                    <div>
+                      <Label>Cronograma de Envio</Label>
+                      <p className="text-sm text-muted-foreground mb-4">Defina quantos dias antes do vencimento cada lembrete será enviado.</p>
+                      <div className="space-y-3">
+                        {reminderDays.map((day, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={day}
+                              onChange={(e) => handleReminderDayChange(index, e.target.value)}
+                              className="w-48"
+                              disabled={savingAutomations}
+                            />
+                            <span className="text-sm text-muted-foreground">dias antes do vencimento</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Pré-requisitos para Funcionar</h4>
+                      <ul className="list-disc list-inside text-sm space-y-2 text-muted-foreground">
+                        <li>O número de telefone do aluno deve estar cadastrado na tela de "Alunos".</li>
+                        <li>O número deve estar no formato internacional completo (Ex: <span className="font-mono text-xs bg-muted p-1 rounded">+5513999998888</span>).</li>
+                        <li>A "Chave PIX ou Link de Pagamento" (na aba Detalhes) deve estar preenchida para ser incluída na mensagem.</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                      <h4 className="font-semibold mb-2 flex items-center gap-2 text-blue-800"><Smartphone className="h-4 w-4" />Status da Integração com o WhatsApp</h4>
+                      <p className="text-sm text-blue-700">Sua conta está configurada para enviar mensagens através do parceiro oficial Twilio.</p>
+                    </div>
+                    <div className="flex justify-end pt-4">
+                      <Button type="submit" disabled={savingAutomations}>
+                        <Save className="h-4 w-4 mr-2" />
+                        {savingAutomations ? "Salvando..." : "Salvar Automação"}
                       </Button>
                     </div>
                   </form>
@@ -363,46 +381,6 @@ const Settings = () => {
               </Card>
             </TabsContent>
 
-            {/* Automação */}
-            <TabsContent value="automation">
-              <Card className="mt-4">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Info className="h-5 w-5 text-primary" />Como Funciona a Automação de Lembretes</CardTitle>
-                  <CardDescription>Entenda como o sistema ajuda a reduzir a inadimplência e a reter alunos.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <p className="text-sm text-muted-foreground">
-                    Nosso sistema monitora automaticamente as datas de vencimento de todas as matrículas. Quando uma matrícula está prestes a vencer, uma sequência de lembretes é enviada via WhatsApp para o aluno, incentivando a renovação.
-                  </p>
-                  <div className="p-4 border rounded-lg bg-muted/30">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="h-4 w-4" />Cronograma de Envio</h4>
-                    <ul className="list-disc list-inside text-sm space-y-1">
-                      <li>**3 dias** antes do vencimento</li>
-                      <li>**1 dia** antes do vencimento (no dia anterior)</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Pré-requisitos para Funcionar</h4>
-                    <ul className="list-disc list-inside text-sm space-y-2 text-muted-foreground">
-                      <li>
-                        O número de telefone do aluno deve estar cadastrado na tela de "Alunos".
-                      </li>
-                      <li>
-                        O número deve estar no formato internacional completo, incluindo o código do país (+55), DDD e o número. Ex: <span className="font-mono text-xs bg-muted p-1 rounded">+5513999998888</span>.
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2 text-blue-800"><Smartphone className="h-4 w-4" />Status da Integração com o WhatsApp</h4>
-                    <p className="text-sm text-blue-700">
-                      Sua conta está configurada para enviar mensagens através do parceiro oficial Twilio. Todas as mensagens são enviadas usando modelos pré-aprovados pela Meta para garantir a entrega.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Segurança */}
             <TabsContent value="security">
               <Card className="mt-4">
                 <CardHeader>
@@ -413,28 +391,11 @@ const Settings = () => {
                   <form onSubmit={handlePasswordUpdate} className="space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="newPassword">Nova Senha</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        minLength={6}
-                        required
-                        disabled={savingPassword}
-                        placeholder="Mínimo 6 caracteres"
-                      />
+                      <Input id="newPassword" type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} minLength={6} required disabled={savingPassword} placeholder="Mínimo 6 caracteres" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        minLength={6}
-                        required
-                        disabled={savingPassword}
-                      />
+                      <Input id="confirmPassword" type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} minLength={6} required disabled={savingPassword} />
                     </div>
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={savingPassword}>
@@ -450,7 +411,6 @@ const Settings = () => {
         </div>
       </main>
 
-      {/* --- RENDERIZAÇÃO CONDICIONAL DOS MODAIS DE AJUDA --- */}
       <IntegrationHelpDialog
         platform="Gympass"
         open={isGympassHelpOpen}
@@ -463,7 +423,6 @@ const Settings = () => {
         onOpenChange={setTotalPassHelpOpen}
         webhookUrl={integrationData.webhookUrl}
       />
-      {/* --- FIM RENDERIZAÇÃO MODAIS --- */}
     </>
   );
 };
