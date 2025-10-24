@@ -7,7 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
-import { Camera, Utensils, Dumbbell, Trophy, Weight } from "lucide-react";
+import { Camera, Utensils, Dumbbell, Trophy, Weight, TrendingUp, TrendingDown } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile"; // Hook para detectar se é mobile
 
 interface StudentHistoryDialogProps {
     studentId: string | null;
@@ -26,11 +27,45 @@ const EventIcon = ({ type }: { type: string }) => {
     }
 };
 
+const WeightEvolutionList = ({ data }: { data: { date: string; peso: number }[] }) => {
+    if (data.length === 0) {
+        return <div className="flex items-center justify-center h-full"><p className="text-sm text-muted-foreground">Nenhum registro de peso.</p></div>;
+    }
+    return (
+        <ScrollArea className="h-full">
+            <div className="space-y-4 pr-4">
+                {data.map((entry, index) => {
+                    const previousEntry = index > 0 ? data[index - 1] : null;
+                    const change = previousEntry ? entry.peso - previousEntry.peso : 0;
+                    return (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-3">
+                                <Weight className="h-5 w-5 text-purple-500" />
+                                <div>
+                                    <p className="font-bold">{entry.peso.toFixed(1)} kg</p>
+                                    <p className="text-xs text-muted-foreground">{entry.date}</p>
+                                </div>
+                            </div>
+                            {change !== 0 && (
+                                <div className={`flex items-center text-xs font-semibold ${change > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                    {change > 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                                    {change.toFixed(1)} kg
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </ScrollArea>
+    );
+};
+
 export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentHistoryDialogProps) => {
     const [loading, setLoading] = useState(true);
     const [history, setHistory] = useState<any[]>([]);
     const [studentName, setStudentName] = useState("");
     const [weightData, setWeightData] = useState<any[]>([]);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         const loadHistory = async () => {
@@ -48,7 +83,7 @@ export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentH
                 const weights = data
                     .filter(item => item.event_type === 'weight_log' && item.metadata?.weight)
                     .map(item => ({
-                        date: format(new Date(item.created_at), 'dd/MM'),
+                        date: format(new Date(item.created_at), 'dd/MM/yy'),
                         peso: parseFloat(item.metadata.weight)
                     }))
                     .reverse();
@@ -79,7 +114,6 @@ export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentH
                     <DialogDescription>Acompanhe o progresso e todas as interações do aluno.</DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col md:flex-row gap-6 py-4 flex-1 min-h-0">
-                    {/* Coluna da Linha do Tempo */}
                     <div className="flex flex-col gap-4 md:w-1/2 h-[40vh] md:h-auto">
                         <h3 className="font-semibold">Linha do Tempo</h3>
                         <ScrollArea className="flex-1 pr-4 -mr-4">
@@ -105,22 +139,25 @@ export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentH
                             </div>
                         </ScrollArea>
                     </div>
-                    {/* Coluna do Gráfico */}
                     <div className="flex flex-col gap-4 md:w-1/2 h-[40vh] md:h-auto">
-                        <h3 className="font-semibold">Gráfico de Evolução (Peso)</h3>
+                        <h3 className="font-semibold">Evolução de Peso</h3>
                         <div className="flex-1 rounded-lg border p-4 flex flex-col">
                             {loading && <Skeleton className="h-full w-full" />}
-                            {!loading && weightData.length < 2 && <div className="flex items-center justify-center h-full"><p className="text-sm text-muted-foreground">Dados insuficientes para gerar o gráfico.</p></div>}
-                            {weightData.length >= 2 && (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={weightData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="date" fontSize={12} />
-                                        <YAxis domain={['dataMin - 2', 'dataMax + 2']} fontSize={12} tickFormatter={(value) => `${value}kg`} />
-                                        <Tooltip formatter={(value: number) => [`${value.toFixed(1)} kg`, "Peso"]} />
-                                        <Line type="monotone" dataKey="peso" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                            {!loading && isMobile && <WeightEvolutionList data={weightData} />}
+                            {!loading && !isMobile && (
+                                weightData.length < 2 ? (
+                                    <div className="flex items-center justify-center h-full"><p className="text-sm text-muted-foreground">Dados insuficientes para gerar o gráfico.</p></div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={weightData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="date" fontSize={12} />
+                                            <YAxis domain={['dataMin - 2', 'dataMax + 2']} fontSize={12} tickFormatter={(value) => `${value}kg`} />
+                                            <Tooltip formatter={(value: number) => [`${value.toFixed(1)} kg`, "Peso"]} />
+                                            <Line type="monotone" dataKey="peso" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                )
                             )}
                         </div>
                     </div>
