@@ -109,15 +109,17 @@ export const AtRiskStudentsDialog = ({ open, onOpenChange }: AtRiskStudentsDialo
                                         <TableRow key={s.id}>
                                             <TableCell className="font-medium">{s.name}</TableCell>
                                             <TableCell className="text-muted-foreground">{formatLastCheckin(s.last_check_in)}</TableCell>
-                                            <TableCell className="text-right space-x-2">
-                                                <Button size="sm" variant="outline" onClick={() => handleGoToStudent(s.name)}>
-                                                    <User className="h-4 w-4 mr-2" />
-                                                    Ver Aluno
-                                                </Button>
-                                                <Button size="sm" onClick={() => handleContact(s.phone_number)}>
-                                                    <MessageCircle className="h-4 w-4 mr-2" />
-                                                    Contatar
-                                                </Button>
+                                            <TableCell className="text-right">
+                                                <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                                                    <Button size="sm" variant="outline" onClick={() => handleGoToStudent(s.name)}>
+                                                        <User className="h-4 w-4 mr-2" />
+                                                        Ver Aluno
+                                                    </Button>
+                                                    <Button size="sm" onClick={() => handleContact(s.phone_number)}>
+                                                        <MessageCircle className="h-4 w-4 mr-2" />
+                                                        Contatar
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
