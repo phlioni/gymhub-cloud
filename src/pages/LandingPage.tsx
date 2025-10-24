@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import gymhubLogo from "@/assets/gymhub-logo.png";
+import { Link } from "react-router-dom";
 
 // As imagens da pasta 'public' são referenciadas diretamente pelo caminho
 const dashboardImg = "/image.png";
 const whatsappScreenshot1 = "/w01.jpeg";
 const whatsappScreenshot2 = "/w02.jpeg";
+const newLogo = "/transparent-Photoroom.png"; // <<< NOVO LOGO
 
 import { AlertTriangle, Clock, TrendingDown, Zap, Bot, Users, DollarSign, CheckCircle } from "lucide-react";
 
@@ -19,16 +20,21 @@ export const LandingPage = () => {
         <div className="flex flex-col min-h-screen bg-background text-foreground">
             {/* Header */}
             <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-sm">
-                <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
+                <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
                     <a href="#" className="flex items-center gap-2">
-                        <img src={gymhubLogo} alt="TreineAI Logo" className="h-10 w-10" />
-                        <span className="text-xl md:text-2xl font-bold text-primary">TreineAI</span>
+                        <img src={newLogo} alt="TreineAI Logo" className="h-16 w-16" /> {/* <<< LOGO ATUALIZADO E MAIOR */}
+                        <span className="text-2xl md:text-3xl font-bold text-primary">TreineAI</span>
                     </a>
-                    <Button asChild size="sm" className="px-3 text-xs md:px-4 md:text-sm">
-                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                            Quero Meu Teste Grátis
-                        </a>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button asChild variant="outline" size="sm" className="hidden sm:flex">
+                            <Link to="/login">Acessar Plataforma</Link>
+                        </Button>
+                        <Button asChild size="sm" className="px-3 text-xs md:px-4 md:text-sm">
+                            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                                Quero Meu Teste Grátis
+                            </a>
+                        </Button>
+                    </div>
                 </div>
             </header>
 
@@ -189,37 +195,6 @@ export const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* Seção de Preços */}
-                <section className="py-16 md:py-24 bg-muted/20">
-                    <div className="container mx-auto px-4">
-                        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-                            Um investimento inteligente para o seu crescimento.
-                        </h2>
-                        <Card className="max-w-lg mx-auto border-2 border-primary shadow-glow">
-                            <CardHeader className="text-center">
-                                <CardTitle className="text-2xl">Plano TreineAI Completo</CardTitle>
-                                <CardDescription>Sem taxas escondidas, sem contrato de fidelidade.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="text-center">
-                                <p className="text-5xl font-bold mb-4">R$ 149,90<span className="text-lg font-normal text-muted-foreground">/mês</span></p>
-                                <ul className="space-y-3 text-left my-8">
-                                    <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0" /><span>Dashboard completo</span></li>
-                                    <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0" /><span>Gestão de Alunos Ilimitada</span></li>
-                                    <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0" /><span>Assistente Virtual ArIA no WhatsApp</span></li>
-                                    <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0" /><span>Lembretes de Pagamento Automáticos</span></li>
-                                    <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0" /><span>Integração com Gympass e TotalPass</span></li>
-                                    <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500 shrink-0" /><span>Suporte Prioritário</span></li>
-                                </ul>
-                                <Button asChild size="lg" className="w-full h-12 text-base md:text-lg">
-                                    <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                                        Quero Meus 2 Meses GRÁTIS!
-                                    </a>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </section>
-
                 {/* Seção Final de CTA */}
                 <section className="py-20 bg-primary/90 text-primary-foreground">
                     <div className="container mx-auto text-center px-4">
@@ -234,14 +209,13 @@ export const LandingPage = () => {
                         </Button>
                     </div>
                 </section>
-
             </main>
 
             {/* Rodapé */}
             <footer className="border-t">
                 <div className="container mx-auto flex flex-col md:flex-row items-center justify-between py-6 px-4 md:px-6 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
-                        <img src={gymhubLogo} alt="TreineAI Logo" className="h-6 w-6" />
+                        <img src={newLogo} alt="TreineAI Logo" className="h-8 w-8" />
                         <span>© {new Date().getFullYear()} TreineAI. Todos os direitos reservados.</span>
                     </div>
                     <div className="flex flex-col md:flex-row gap-2 md:gap-4 mt-4 md:mt-0">

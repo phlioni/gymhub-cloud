@@ -215,7 +215,7 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
         if (error) {
             toast.error("Falha ao sair: " + error.message);
         } else {
-            navigate('/');
+            navigate('/login');
         }
     };
 
