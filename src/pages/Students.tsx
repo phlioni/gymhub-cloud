@@ -3,22 +3,24 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, MessageCircle } from "lucide-react";
+import { Plus, Search, MessageCircle, Upload } from "lucide-react"; // Importar Upload
 import { StudentsTable } from "@/components/students/StudentsTable";
 import { AddStudentDialog } from "@/components/students/AddStudentDialog";
 import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
-import { WhatsappInfoDialog } from "@/components/students/WhatsappInfoDialog"; // Importe o novo modal
+import { WhatsappInfoDialog } from "@/components/students/WhatsappInfoDialog";
+import { ImportStudentsDialog } from "@/components/students/ImportStudentsDialog"; // Importar o novo componente
 
 const Students = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false); // Estado para o novo modal
   const [students, setStudents] = useState<any[]>([]);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showWhatsappInfo, setShowWhatsappInfo] = useState(false); // Estado para controlar o modal de informação
+  const [showWhatsappInfo, setShowWhatsappInfo] = useState(false);
 
   useEffect(() => {
     const nameParam = searchParams.get('name');
@@ -90,7 +92,7 @@ const Students = () => {
                 Alunos
               </h1>
               <p className="text-sm md:text-base text-muted-foreground">
-                Gerencie os membros da sua academia
+                Gerencie seus alunos.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -103,10 +105,14 @@ const Students = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              {/* Botão modificado para abrir o modal */}
               <Button variant="outline" className="h-11 px-4" onClick={() => setShowWhatsappInfo(true)}>
                 <MessageCircle className="h-5 w-5 md:mr-2" />
                 <span className="hidden md:inline font-medium">Link do Aluno</span>
+              </Button>
+              {/* Novo botão de Importar */}
+              <Button variant="outline" className="h-11 px-4" onClick={() => setShowImportDialog(true)}>
+                <Upload className="h-5 w-5 md:mr-2" />
+                <span className="hidden md:inline font-medium">Importar Alunos</span>
               </Button>
               <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all hidden md:inline-flex">
                 <Plus className="h-5 w-5 md:mr-2" />
@@ -128,10 +134,17 @@ const Students = () => {
             onSuccess={loadStudents}
           />
 
-          {/* Renderiza o novo modal informativo */}
           <WhatsappInfoDialog
             open={showWhatsappInfo}
             onOpenChange={setShowWhatsappInfo}
+          />
+
+          {/* Novo modal de importação */}
+          <ImportStudentsDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            organizationId={organizationId}
+            onSuccess={loadStudents}
           />
 
         </div>
