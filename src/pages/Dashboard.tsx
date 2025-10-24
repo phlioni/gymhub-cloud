@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import {
   TrendingUp,
   CheckCheck,
   BarChart2,
+  PieChart,
   ClipboardCheck,
   CalendarClock,
   UserMinus,
@@ -18,7 +19,7 @@ import {
   ShoppingBag,
   Award
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, Cell } from 'recharts';
 import { ExpiringEnrollmentsDialog } from "@/components/dashboard/ExpiringEnrollmentsDialog";
 import { OverdueEnrollmentsDialog } from "@/components/dashboard/OverdueEnrollmentsDialog";
 import { AtRiskStudentsDialog } from "@/components/dashboard/AtRiskStudentsDialog";
@@ -32,6 +33,11 @@ interface MonthlyRevenue {
 interface ModalityPopularity {
   name: string;
   count: number;
+}
+interface CheckInSource {
+  name: string;
+  value: number;
+  fill: string;
 }
 interface TopProduct {
   name: string | null;
@@ -58,6 +64,7 @@ const Dashboard = () => {
     revenueChartData: [] as MonthlyRevenue[],
     salesChartData: [] as MonthlyRevenue[],
     modalityPopularityData: [] as ModalityPopularity[],
+    checkInSourceData: [] as CheckInSource[],
     topProducts: [] as TopProduct[],
   });
 
@@ -86,6 +93,7 @@ const Dashboard = () => {
         { count: pendingValidationsCount },
         { data: topProductsData, error: rpcErrorTopProducts },
         { data: allStudentsWithCheckins, error: studentsError },
+        { data: checkInSources, error: checkInSourcesError },
       ] = await Promise.all([
         supabase.from('students').select('*', { count: 'exact', head: true }),
         supabase.from('sales').select('total_price').gte('sale_date', firstDayOfCurrentMonth.toISOString()),
@@ -98,6 +106,7 @@ const Dashboard = () => {
         supabase.from('student_coach_interactions').select('*', { count: 'exact', head: true }).eq('conversation_state', 'awaiting_plan_validation'),
         supabase.rpc('get_top_products_this_month'),
         supabase.from('students').select('id, check_ins(checked_in_at)'),
+        supabase.from('check_ins').select('source').gte('checked_in_at', firstDayOfCurrentMonth.toISOString()),
       ]);
 
       if (rpcErrorEnrollments) throw rpcErrorEnrollments;
@@ -105,6 +114,7 @@ const Dashboard = () => {
       if (rpcErrorModality) throw rpcErrorModality;
       if (rpcErrorTopProducts) throw rpcErrorTopProducts;
       if (studentsError) throw studentsError;
+      if (checkInSourcesError) throw checkInSourcesError;
 
       const monthlyProductRevenue = salesThisMonthData?.reduce((sum, sale) => sum + sale.total_price, 0) || 0;
       const { current_month_total, previous_month_total, chart_data: enrollmentChartData } = enrollmentRevenueStats as any;
@@ -117,6 +127,18 @@ const Dashboard = () => {
         revenueChange = 100;
       }
 
+      const sourceCounts = { 'Direto': 0, 'Gympass': 0, 'TotalPass': 0 };
+      checkInSources?.forEach(c => {
+        if (c.source === 'Gympass') sourceCounts.Gympass++;
+        else if (c.source === 'TotalPass') sourceCounts.TotalPass++;
+        else sourceCounts.Direto++;
+      });
+
+      const COLORS = { 'Direto': 'hsl(var(--primary))', 'Gympass': 'hsl(var(--chart-2))', 'TotalPass': 'hsl(var(--chart-3))' };
+      const checkInSourceData = Object.entries(sourceCounts)
+        .map(([name, value]) => ({ name, value, fill: COLORS[name as keyof typeof COLORS] }))
+        .filter(item => item.value > 0);
+
       const atRiskStudents = allStudentsWithCheckins?.filter(student => {
         if (student.check_ins.length === 0) return true;
         const lastCheckIn = new Date(Math.max(...student.check_ins.map(ci => new Date(ci.checked_in_at).getTime())));
@@ -127,7 +149,7 @@ const Dashboard = () => {
         totalRevenueMonth,
         revenueChange,
         activeStudents: totalStudents || 0,
-        netStudentGrowth: 4, // Simulado
+        netStudentGrowth: 4,
         checkInsToday: checkInsToday || 0,
         pendingValidationsCount: pendingValidationsCount || 0,
         expiringEnrollmentsCount: expiringIn10Days || 0,
@@ -136,6 +158,7 @@ const Dashboard = () => {
         revenueChartData: enrollmentChartData || [],
         salesChartData: salesRevenueStats as MonthlyRevenue[] || [],
         modalityPopularityData: modalityPopularity as ModalityPopularity[] || [],
+        checkInSourceData,
         topProducts: topProductsData || [],
       });
 
@@ -160,7 +183,11 @@ const Dashboard = () => {
           <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Receita do Mês</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-10 w-3/4" /> : <><div className="text-3xl font-bold">{formatCurrency(data.totalRevenueMonth)}</div><p className={cn("text-xs", data.revenueChange >= 0 ? "text-green-600" : "text-red-600")}> {data.revenueChange >= 0 ? '+' : ''}{data.revenueChange.toFixed(1)}% em relação ao mês anterior</p></>}</CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Alunos Ativos</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-10 w-1/2" /> : <><div className="text-3xl font-bold">{data.activeStudents}</div><p className={cn("text-xs", data.netStudentGrowth >= 0 ? "text-green-600" : "text-red-600")}> {data.netStudentGrowth >= 0 ? '+' : ''}{data.netStudentGrowth} este mês</p></>}</CardContent></Card>
-            <Card className="cursor-pointer hover:border-primary/50" onClick={() => setShowAtRiskDialog(true)}><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Alunos em Risco</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-10 w-1/4" /> : <><div className="text-3xl font-bold">{data.atRiskStudentsCount}</div><p className="text-xs text-muted-foreground">Não treinam há mais de 15 dias</p></>}</CardContent></Card>
+            <Card className="flex flex-col cursor-pointer hover:border-primary/50" onClick={() => setShowAtRiskDialog(true)}>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Alunos em Risco</CardTitle></CardHeader>
+              <CardContent>{loading ? <Skeleton className="h-10 w-1/4" /> : <><div className="text-3xl font-bold">{data.atRiskStudentsCount}</div><p className="text-xs text-muted-foreground">Não treinam há mais de 15 dias</p></>}</CardContent>
+              <CardFooter className="mt-auto pt-0"><p className="text-xs text-muted-foreground flex items-center gap-1"><ArrowRight className="h-3 w-3" /> Clique para ver a lista</p></CardFooter>
+            </Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Check-ins Hoje</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-10 w-1/4" /> : <><div className="text-3xl font-bold">{data.checkInsToday}</div><p className="text-xs text-muted-foreground">Alunos que treinaram hoje</p></>}</CardContent></Card>
           </div>
 
