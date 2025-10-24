@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "react-router-dom";
+import { Link } from "react-router-dom"; // Importar o Link para navegação interna
 
 // As imagens da pasta 'public' são referenciadas diretamente pelo caminho
 const dashboardImg = "/image.png";
 const whatsappScreenshot1 = "/w01.jpeg";
 const whatsappScreenshot2 = "/w02.jpeg";
-const newLogo = "/transparent-Photoroom.png"; // <<< NOVO LOGO
+const newLogo = "/transparent-Photoroom.png"; // Novo logo
 
 import { AlertTriangle, Clock, TrendingDown, Zap, Bot, Users, DollarSign, CheckCircle } from "lucide-react";
 
@@ -22,17 +22,12 @@ export const LandingPage = () => {
             <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-sm">
                 <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
                     <a href="#" className="flex items-center gap-2">
-                        <img src={newLogo} alt="TreineAI Logo" className="h-16 w-16" /> {/* <<< LOGO ATUALIZADO E MAIOR */}
+                        <img src={newLogo} alt="TreineAI Logo" className="h-16 w-16" />
                         <span className="text-2xl md:text-3xl font-bold text-primary">TreineAI</span>
                     </a>
                     <div className="flex items-center gap-2">
-                        <Button asChild variant="outline" size="sm" className="hidden sm:flex">
+                        <Button asChild variant="outline" size="sm" className="px-3 text-xs md:px-4 md:text-sm">
                             <Link to="/login">Acessar Plataforma</Link>
-                        </Button>
-                        <Button asChild size="sm" className="px-3 text-xs md:px-4 md:text-sm">
-                            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                                Quero Meu Teste Grátis
-                            </a>
                         </Button>
                     </div>
                 </div>
