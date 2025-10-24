@@ -80,10 +80,10 @@ export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentH
                 </DialogHeader>
                 <div className="flex flex-col md:flex-row gap-6 py-4 flex-1 min-h-0">
                     {/* Coluna da Linha do Tempo */}
-                    <div className="flex flex-col gap-4 md:w-1/2">
+                    <div className="flex flex-col gap-4 md:w-1/2 h-[40vh] md:h-auto">
                         <h3 className="font-semibold">Linha do Tempo</h3>
                         <ScrollArea className="flex-1 pr-4 -mr-4">
-                            {loading && <Skeleton className="h-48 w-full" />}
+                            {loading && <Skeleton className="h-full w-full" />}
                             {!loading && history.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Nenhum evento no histórico.</p>}
                             <div className="space-y-6">
                                 {history.map(item => (
@@ -106,9 +106,9 @@ export const StudentHistoryDialog = ({ studentId, open, onOpenChange }: StudentH
                         </ScrollArea>
                     </div>
                     {/* Coluna do Gráfico */}
-                    <div className="flex flex-col gap-4 md:w-1/2">
+                    <div className="flex flex-col gap-4 md:w-1/2 h-[40vh] md:h-auto">
                         <h3 className="font-semibold">Gráfico de Evolução (Peso)</h3>
-                        <div className="flex-1 rounded-lg border p-4 min-h-[300px] md:min-h-0">
+                        <div className="flex-1 rounded-lg border p-4 flex flex-col">
                             {loading && <Skeleton className="h-full w-full" />}
                             {!loading && weightData.length < 2 && <div className="flex items-center justify-center h-full"><p className="text-sm text-muted-foreground">Dados insuficientes para gerar o gráfico.</p></div>}
                             {weightData.length >= 2 && (
