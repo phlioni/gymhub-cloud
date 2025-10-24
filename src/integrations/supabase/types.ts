@@ -15,21 +15,21 @@ export type Database = {
           id: string
           organization_id: string
           student_id: string
-          source: string | null // <-- NOVO
+          source: string | null
         }
         Insert: {
           checked_in_at?: string
           id?: string
           organization_id: string
           student_id: string
-          source?: string | null // <-- NOVO
+          source?: string | null
         }
         Update: {
           checked_in_at?: string
           id?: string
           organization_id?: string
           student_id?: string
-          source?: string | null // <-- NOVO
+          source?: string | null
         }
         Relationships: [
           {
@@ -145,10 +145,12 @@ export type Database = {
           owner_name: string | null
           phone_number: string | null
           organization_type: string | null
-          gympass_api_key: string | null // Renomeado no frontend, mas mantido aqui por compatibilidade
-          gympass_integration_code: number | null // Alterado para number
-          totalpass_api_key: string | null // Renomeado no frontend, mas mantido aqui por compatibilidade
+          gympass_api_key: string | null
+          gympass_integration_code: number | null
+          totalpass_api_key: string | null
           totalpass_integration_code: string | null
+          payment_details: string | null
+          reminder_days: number[] | null
         }
         Insert: {
           address?: string | null
@@ -161,9 +163,11 @@ export type Database = {
           phone_number?: string | null
           organization_type?: string | null
           gympass_api_key?: string | null
-          gympass_integration_code?: number | null // Alterado para number
+          gympass_integration_code?: number | null
           totalpass_api_key?: string | null
           totalpass_integration_code?: string | null
+          payment_details?: string | null
+          reminder_days?: number[] | null
         }
         Update: {
           address?: string | null
@@ -176,9 +180,11 @@ export type Database = {
           phone_number?: string | null
           organization_type?: string | null
           gympass_api_key?: string | null
-          gympass_integration_code?: number | null // Alterado para number
+          gympass_integration_code?: number | null
           totalpass_api_key?: string | null
           totalpass_integration_code?: string | null
+          payment_details?: string | null
+          reminder_days?: number[] | null
         }
         Relationships: []
       }
@@ -360,7 +366,7 @@ export type Database = {
           phone_number: string | null
           gympass_user_token: string | null
           totalpass_user_token: string | null
-          email: string | null // <-- NOVO
+          email: string | null
         }
         Insert: {
           birth_date?: string | null
@@ -372,7 +378,7 @@ export type Database = {
           phone_number?: string | null
           gympass_user_token?: string | null
           totalpass_user_token?: string | null
-          email?: string | null // <-- NOVO
+          email?: string | null
         }
         Update: {
           birth_date?: string | null
@@ -384,7 +390,7 @@ export type Database = {
           phone_number?: string | null
           gympass_user_token?: string | null
           totalpass_user_token?: string | null
-          email?: string | null // <-- NOVO
+          email?: string | null
         }
         Relationships: [
           {
@@ -459,7 +465,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_checkin_count: { // <-- Função adicionada em uma migração anterior
+      get_checkin_count: {
         Args: { student_id_param: string }
         Returns: number
       }
@@ -596,4 +602,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
   ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
   : never
-}
