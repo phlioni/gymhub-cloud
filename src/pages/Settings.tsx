@@ -6,23 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, Info, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle, XCircle, PlusCircle, Save } from "lucide-react";
+import { Upload, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle, Save } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { IntegrationHelpDialog } from "@/components/IntegrationHelpDialog";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 const SUPABASE_URL = supabase.supabaseUrl;
 
 const Settings = () => {
-  const [loading, setLoading] = useState(true);
+  const { organizationId, loading: authLoading } = useAuthProtection();
+  const [dataLoading, setDataLoading] = useState(true);
   const [savingDetails, setSavingDetails] = useState(false);
   const [savingAutomations, setSavingAutomations] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingIntegrations, setSavingIntegrations] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -50,44 +51,41 @@ const Settings = () => {
   const [isTotalPassHelpOpen, setTotalPassHelpOpen] = useState(false);
 
   useEffect(() => {
-    loadOrganizationData();
-  }, []);
+    if (organizationId) {
+      loadOrganizationData();
+    }
+  }, [organizationId]);
 
   const loadOrganizationData = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
-      if (profile?.organization_id) {
-        setOrganizationId(profile.organization_id);
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', profile.organization_id)
-          .single();
-        if (orgData) {
-          setFormData({
-            name: orgData.name || "",
-            address: orgData.address || "",
-            ownerName: orgData.owner_name || "",
-            phoneNumber: orgData.phone_number || "",
-            businessHours: orgData.business_hours || "",
-            logoUrl: orgData.logo_url || "",
-            organizationType: orgData.organization_type || "Academia",
-            paymentDetails: orgData.payment_details || "",
-          });
-          setReminderDays(orgData.reminder_days || [3, 1]);
-          setIntegrationData({
-            gympassApiKey: orgData.gympass_api_key || "",
-            gympassIntegrationCode: orgData.gympass_integration_code ? String(orgData.gympass_integration_code) : "",
-            totalpassApiKey: orgData.totalpass_api_key || "",
-            totalpassIntegrationCode: orgData.totalpass_integration_code || "",
-            webhookUrl: `${SUPABASE_URL}/functions/v1/checkin-integration`,
-          });
-        }
+    setDataLoading(true);
+    if (organizationId) {
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', organizationId)
+        .single();
+      if (orgData) {
+        setFormData({
+          name: orgData.name || "",
+          address: orgData.address || "",
+          ownerName: orgData.owner_name || "",
+          phoneNumber: orgData.phone_number || "",
+          businessHours: orgData.business_hours || "",
+          logoUrl: orgData.logo_url || "",
+          organizationType: orgData.organization_type || "Academia",
+          paymentDetails: orgData.payment_details || "",
+        });
+        setReminderDays(orgData.reminder_days || [3, 1]);
+        setIntegrationData({
+          gympassApiKey: orgData.gympass_api_key || "",
+          gympassIntegrationCode: orgData.gympass_integration_code ? String(orgData.gympass_integration_code) : "",
+          totalpassApiKey: orgData.totalpass_api_key || "",
+          totalpassIntegrationCode: orgData.totalpass_integration_code || "",
+          webhookUrl: `${SUPABASE_URL}/functions/v1/checkin-integration`,
+        });
       }
     }
-    setLoading(false);
+    setDataLoading(false);
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -203,8 +201,8 @@ const Settings = () => {
     newDays[index] = Number(value);
     setReminderDays(newDays);
   };
-  const addReminderDay = () => setReminderDays([...reminderDays, 1]);
-  const removeReminderDay = (index: number) => setReminderDays(reminderDays.filter((_, i) => i !== index));
+
+  const isLoading = authLoading || dataLoading;
 
   return (
     <>
@@ -228,7 +226,7 @@ const Settings = () => {
             </TabsList>
 
             <TabsContent value="details">
-              {loading ? (
+              {isLoading ? (
                 <Card className="mt-4"><CardContent className="p-12"><div className="space-y-4">{[1, 2, 3, 4].map((i) => (<Skeleton key={i} className="h-12 bg-muted rounded" />))}</div></CardContent></Card>
               ) : (
                 <Card className="mt-4">

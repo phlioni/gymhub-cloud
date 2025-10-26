@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -24,6 +23,8 @@ import { ExpiringEnrollmentsDialog } from "@/components/dashboard/ExpiringEnroll
 import { OverdueEnrollmentsDialog } from "@/components/dashboard/OverdueEnrollmentsDialog";
 import { AtRiskStudentsDialog } from "@/components/dashboard/AtRiskStudentsDialog";
 import { cn } from "@/lib/utils";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
+import { Button } from "@/components/ui/button";
 
 // --- Tipagens ---
 interface MonthlyRevenue {
@@ -46,7 +47,8 @@ interface TopProduct {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const { loading: authLoading } = useAuthProtection();
+  const [dataLoading, setDataLoading] = useState(true);
   const [showExpiringDialog, setShowExpiringDialog] = useState(false);
   const [showOverdueDialog, setShowOverdueDialog] = useState(false);
   const [showAtRiskDialog, setShowAtRiskDialog] = useState(false);
@@ -69,11 +71,13 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!authLoading) {
+      loadDashboardData();
+    }
+  }, [authLoading]);
 
   const loadDashboardData = async () => {
-    setLoading(true);
+    setDataLoading(true);
     try {
       const today = new Date();
       const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -165,11 +169,13 @@ const Dashboard = () => {
     } catch (error: any) {
       toast.error("Falha ao carregar os dados do painel.", { description: error.message });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
   const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
+
+  const loading = authLoading || dataLoading;
 
   return (
     <>

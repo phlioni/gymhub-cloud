@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ThumbsDown, Edit, Bot, User, CheckCircle } from "lucide-react";
 import { AddEditWorkoutDialog } from "@/components/workouts/AddEditWorkoutDialog";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 interface PlanSuggestion {
     student_phone_number: string;
@@ -18,14 +19,14 @@ interface PlanSuggestion {
 }
 
 const AiAssistantPage = () => {
-    const [loading, setLoading] = useState(true);
+    const { organizationId, loading: authLoading } = useAuthProtection();
+    const [suggestionsLoading, setSuggestionsLoading] = useState(true);
     const [suggestions, setSuggestions] = useState<PlanSuggestion[]>([]);
     const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
     const [isWorkoutModalOpen, setWorkoutModalOpen] = useState(false);
-    const [organizationId, setOrganizationId] = useState<string | null>(null);
 
     const loadSuggestions = useCallback(async (orgId: string) => {
-        setLoading(true);
+        setSuggestionsLoading(true);
         try {
             const { data: studentsWithPendingPlans, error: studentsError } = await supabase
                 .from('students')
@@ -51,23 +52,15 @@ const AiAssistantPage = () => {
         } catch (err: any) {
             toast.error("Falha ao carregar sugestões da IA: " + err.message);
         } finally {
-            setLoading(false);
+            setSuggestionsLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        const getOrgAndLoad = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
-                if (profile?.organization_id) {
-                    setOrganizationId(profile.organization_id);
-                    loadSuggestions(profile.organization_id);
-                }
-            }
-        };
-        getOrgAndLoad();
-    }, [loadSuggestions]);
+        if (organizationId) {
+            loadSuggestions(organizationId);
+        }
+    }, [organizationId, loadSuggestions]);
 
     const handleReviewAndApprove = (suggestion: PlanSuggestion) => {
         const workoutForEdit = {
@@ -78,7 +71,6 @@ const AiAssistantPage = () => {
             frequency: 'weekly',
             workout_exercises: [],
             workout_students: [{ students: { id: suggestion.student_id, name: suggestion.student_name } }],
-            // Passando o telefone para o dialog poder notificar e limpar o estado
             student_phone_number: suggestion.student_phone_number,
         };
         setSelectedWorkout(workoutForEdit);
@@ -92,6 +84,8 @@ const AiAssistantPage = () => {
         loadSuggestions(organizationId);
     };
 
+    const isLoading = authLoading || suggestionsLoading;
+
     return (
         <main className="flex-1 p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-6">
@@ -104,9 +98,9 @@ const AiAssistantPage = () => {
                     </p>
                 </div>
 
-                {loading && <Skeleton className="h-48 w-full" />}
+                {isLoading && <Skeleton className="h-48 w-full" />}
 
-                {!loading && suggestions.length === 0 && (
+                {!isLoading && suggestions.length === 0 && (
                     <Card className="p-12 text-center">
                         <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
                         <p className="text-muted-foreground">Nenhuma sugestão da ArIA para validar no momento. Tudo em dia!</p>
@@ -114,7 +108,7 @@ const AiAssistantPage = () => {
                 )}
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {suggestions.map((s, index) => (
+                    {!isLoading && suggestions.map((s, index) => (
                         <Card key={index} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2"><User /> {s.student_name}</CardTitle>

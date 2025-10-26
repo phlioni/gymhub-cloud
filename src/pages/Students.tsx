@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +10,15 @@ import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { WhatsappInfoDialog } from "@/components/students/WhatsappInfoDialog";
 import { ImportStudentsDialog } from "@/components/students/ImportStudentsDialog";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 const Students = () => {
-  const navigate = useNavigate();
+  const { organizationId, loading: authLoading } = useAuthProtection();
   const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
+  const [studentsLoading, setStudentsLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showWhatsappInfo, setShowWhatsappInfo] = useState(false);
 
@@ -27,33 +27,16 @@ const Students = () => {
     if (nameParam) {
       setSearchTerm(nameParam);
     }
-    checkAuth();
   }, [searchParams]);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/');
-      return;
+  useEffect(() => {
+    if (organizationId) {
+      loadStudents();
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('organization_id, role')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profile?.role === 'superadmin') {
-      navigate('/super-admin');
-      return;
-    }
-
-    setOrganizationId(profile?.organization_id || null);
-    loadStudents();
-  };
+  }, [organizationId]);
 
   const loadStudents = async () => {
-    setLoading(true);
+    setStudentsLoading(true);
     try {
       const { data, error } = await supabase
         .from('students')
@@ -69,7 +52,7 @@ const Students = () => {
       toast.error("Falha ao carregar os alunos");
       console.error(error);
     } finally {
-      setLoading(false);
+      setStudentsLoading(false);
     }
   };
 
@@ -81,6 +64,8 @@ const Students = () => {
       student.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [students, searchTerm]);
+
+  const isLoading = authLoading || studentsLoading;
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
@@ -124,7 +109,7 @@ const Students = () => {
 
           <StudentsTable
             students={filteredStudents}
-            loading={loading}
+            loading={isLoading}
             onRefresh={loadStudents}
           />
 

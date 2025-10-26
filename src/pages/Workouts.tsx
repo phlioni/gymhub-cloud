@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WorkoutsList } from "@/components/workouts/WorkoutsList";
 import { AddEditWorkoutDialog } from "@/components/workouts/AddEditWorkoutDialog";
 import { Tables } from "@/integrations/supabase/types";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 // Tipo atualizado para refletir a nova estrutura
 export type WorkoutWithDetails = Tables<'workouts'> & {
@@ -21,49 +21,22 @@ export type WorkoutWithDetails = Tables<'workouts'> & {
 };
 
 const Workouts = () => {
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
+    const { organizationId, loading: authLoading } = useAuthProtection();
+    const [workoutsLoading, setWorkoutsLoading] = useState(true);
     const [showAddEditDialog, setShowAddEditDialog] = useState(false);
     const [editingWorkout, setEditingWorkout] = useState<WorkoutWithDetails | null>(null);
     const [workouts, setWorkouts] = useState<WorkoutWithDetails[]>([]);
-    const [organizationId, setOrganizationId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            navigate('/');
-            return;
+        if (organizationId) {
+            loadWorkouts(organizationId);
         }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id, role')
-            .eq('id', session.user.id)
-            .single();
-
-        if (profile?.role === 'superadmin') {
-            navigate('/super-admin');
-            return;
-        }
-
-        if (profile?.organization_id) {
-            setOrganizationId(profile.organization_id);
-            loadWorkouts(profile.organization_id);
-        } else {
-            toast.error("Organização não encontrada.");
-            setLoading(false);
-        }
-    };
+    }, [organizationId]);
 
     const loadWorkouts = async (orgId: string) => {
-        setLoading(true);
+        setWorkoutsLoading(true);
         try {
-            // Query atualizada para buscar da tabela de junção
             const { data, error } = await supabase
                 .from('workouts')
                 .select(`
@@ -82,7 +55,7 @@ const Workouts = () => {
             toast.error("Falha ao carregar os treinos");
             console.error("Erro ao carregar treinos:", error);
         } finally {
-            setLoading(false);
+            setWorkoutsLoading(false);
         }
     };
 
@@ -99,11 +72,10 @@ const Workouts = () => {
     const handleDelete = async (workoutId: string) => {
         if (!confirm("Tem certeza que deseja excluir este treino e todos os seus exercícios?")) return;
         try {
-            // A exclusão em workout_students e workout_exercises é feita automaticamente pelo ON DELETE CASCADE
             const { error } = await supabase.from('workouts').delete().eq('id', workoutId);
             if (error) throw error;
             toast.success("Treino excluído com sucesso!");
-            if (organizationId) loadWorkouts(organizationId); // Recarrega a lista
+            if (organizationId) loadWorkouts(organizationId);
         } catch (error: any) {
             toast.error("Falha ao excluir o treino.");
             console.error("Erro ao excluir treino:", error);
@@ -120,11 +92,12 @@ const Workouts = () => {
         );
     }, [workouts, searchTerm]);
 
+    const isLoading = authLoading || workoutsLoading;
+
     return (
         <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
             <main className="flex-1 p-4 md:p-8">
                 <div className="max-w-7xl mx-auto space-y-8">
-                    {/* Cabeçalho */}
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                         <div className="space-y-2">
                             <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight flex items-center gap-2">
@@ -151,8 +124,7 @@ const Workouts = () => {
                         </div>
                     </div>
 
-                    {/* Conteúdo (Lista de Treinos) */}
-                    {loading ? (
+                    {isLoading ? (
                         <Card className="p-6">
                             <div className="space-y-4">
                                 {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 bg-muted rounded" />)}
@@ -166,7 +138,6 @@ const Workouts = () => {
                         />
                     )}
 
-                    {/* Dialog para Adicionar/Editar */}
                     <AddEditWorkoutDialog
                         open={showAddEditDialog}
                         onOpenChange={setShowAddEditDialog}
@@ -177,7 +148,6 @@ const Workouts = () => {
                         }}
                     />
                 </div>
-                {/* Botão Flutuante Mobile */}
                 <FloatingActionButton onClick={handleAddNew} />
             </main>
         </div>
