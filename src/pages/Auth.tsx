@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import gymhubLogo from "@/assets/gymhub-logo.png";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ShieldOff } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,39 +17,23 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState("Acesso Suspenso");
 
   useEffect(() => {
     const status = searchParams.get('status');
     if (status === 'inactive' || status === 'overdue') {
+      setErrorTitle("Assinatura Expirada");
       setAuthError("Sua conta foi suspensa por falta de pagamento. Agradecemos por utilizar o TreineAI e esperamos vê-lo de volta em breve!");
+    } else if (status === 'disabled') {
+      setErrorTitle("Conta Desativada");
+      setAuthError("Seu acesso foi desativado por um administrador. Por favor, entre em contato com o suporte.");
     }
 
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase
-          // @ts-ignore
-          .from('profiles')
-          .select('role, organization_id, organizations(subscription_status)')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile?.role === 'superadmin') {
-          navigate('/super-admin');
-          return;
-        }
-
-        // @ts-ignore
-        const subStatus = profile?.organizations?.subscription_status;
-        if (subStatus === 'inactive' || subStatus === 'overdue') {
-          await supabase.auth.signOut();
-          navigate(`/login?status=${subStatus}`, { replace: true });
-          return;
-        }
-
-        if (profile?.organization_id) {
-          navigate('/dashboard');
-        }
+        // Redireciona para o AppLayout que fará a verificação completa
+        navigate('/dashboard');
       }
     };
     checkUser();
@@ -72,9 +56,18 @@ const Auth = () => {
         const { data: profile } = await supabase
           // @ts-ignore
           .from('profiles')
-          .select('role, organization_id, organizations(subscription_status)')
+          .select('role, is_active, organization_id, organizations(subscription_status)')
           .eq('id', data.session.user.id)
           .single();
+
+        // **NOVA VERIFICAÇÃO DE PERFIL ATIVO**
+        if (profile && !profile.is_active) {
+          await supabase.auth.signOut();
+          setErrorTitle("Conta Desativada");
+          setAuthError("Seu acesso foi desativado por um administrador. Por favor, entre em contato com o suporte.");
+          setLoading(false);
+          return;
+        }
 
         if (profile?.role === 'superadmin') {
           navigate('/super-admin');
@@ -85,7 +78,9 @@ const Auth = () => {
         const subStatus = profile?.organizations?.subscription_status;
         if (subStatus === 'inactive' || subStatus === 'overdue') {
           await supabase.auth.signOut();
+          setErrorTitle("Assinatura Expirada");
           setAuthError("Sua conta foi suspensa por falta de pagamento. Agradecemos por utilizar o TreineAI e esperamos vê-lo de volta em breve!");
+          setLoading(false);
           return;
         }
 
@@ -118,8 +113,8 @@ const Auth = () => {
         <CardContent>
           {authError && (
             <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Acesso Suspenso</AlertTitle>
+              {errorTitle === "Conta Desativada" ? <ShieldOff className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+              <AlertTitle>{errorTitle}</AlertTitle>
               <AlertDescription>
                 {authError}
               </AlertDescription>
