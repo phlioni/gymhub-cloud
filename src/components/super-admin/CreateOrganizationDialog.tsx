@@ -26,7 +26,6 @@ export const CreateOrganizationDialog = ({ open, onOpenChange, onSuccess }: Crea
     setLoading(true);
 
     try {
-      // CORREÇÃO: Removido o aninhamento "body"
       const { data, error } = await supabase.functions.invoke('create-organization', {
         body: {
           orgName: formData.orgName,
@@ -36,17 +35,17 @@ export const CreateOrganizationDialog = ({ open, onOpenChange, onSuccess }: Crea
         }
       });
 
-      if (error) throw error;
-      // A resposta da função pode não ter um campo 'success', 
-      // então verificamos diretamente por 'data' ou 'error' na resposta.
-      if (data.error) throw new Error(data.error);
+      if (error) throw new Error(error.message);
 
-      toast.success("Organization created successfully");
+      const responseData = data;
+      if (responseData.error) throw new Error(responseData.error);
+
+      toast.success("Organização criada com sucesso!");
       onSuccess();
       onOpenChange(false);
       setFormData({ orgName: "", adminEmail: "", adminFullName: "", adminPassword: "" });
     } catch (error: any) {
-      toast.error(error.message || "Failed to create organization");
+      toast.error("Falha ao criar organização", { description: error.message });
       console.error(error);
     } finally {
       setLoading(false);
@@ -57,37 +56,37 @@ export const CreateOrganizationDialog = ({ open, onOpenChange, onSuccess }: Crea
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Organization</DialogTitle>
+          <DialogTitle>Criar Nova Organização</DialogTitle>
           <DialogDescription>
-            Create a new gym client with an admin account.
+            Crie um novo cliente com uma conta de administrador.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="orgName">Organization Name *</Label>
+            <Label htmlFor="orgName">Nome da Organização *</Label>
             <Input
               id="orgName"
               value={formData.orgName}
               onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
-              placeholder="e.g., CrossFit Downtown"
+              placeholder="Ex: CrossFit Downtown"
               required
               disabled={loading}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="adminEmail">Admin Email *</Label>
+            <Label htmlFor="adminEmail">Email do Admin *</Label>
             <Input
               id="adminEmail"
               type="email"
               value={formData.adminEmail}
               onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
-              placeholder="admin@example.com"
+              placeholder="admin@exemplo.com"
               required
               disabled={loading}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="adminFullName">Admin Full Name *</Label>
+            <Label htmlFor="adminFullName">Nome Completo do Admin *</Label>
             <Input
               id="adminFullName"
               value={formData.adminFullName}
@@ -98,7 +97,7 @@ export const CreateOrganizationDialog = ({ open, onOpenChange, onSuccess }: Crea
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="adminPassword">Temporary Password *</Label>
+            <Label htmlFor="adminPassword">Senha Temporária *</Label>
             <Input
               id="adminPassword"
               type="password"
@@ -110,15 +109,15 @@ export const CreateOrganizationDialog = ({ open, onOpenChange, onSuccess }: Crea
               minLength={6}
             />
             <p className="text-xs text-muted-foreground">
-              Minimum 6 characters. The admin can change this later.
+              Mínimo de 6 caracteres. O admin poderá alterar depois.
             </p>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Organization"}
+              {loading ? "Criando..." : "Criar Organização"}
             </Button>
           </div>
         </form>
