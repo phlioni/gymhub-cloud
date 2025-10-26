@@ -258,14 +258,14 @@ Deno.serve(async (req) => {
         const mediaUrl = params.get('MediaUrl0');
         const numMedia = parseInt(params.get('NumMedia') || '0', 10);
         const lowerCaseBody = body?.toLowerCase() ?? '';
-        const createTwiMLResponse1 = (message) => `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${message}</Message></Response>`;
+        const createTwiMLResponse = (message) => `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${message}</Message></Response>`;
         const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
         if (!from) return new Response('Parâmetros inválidos.', {
             status: 400
         });
-        const { data: student, error: studentError } = await supabaseAdmin.from('students').select('id, name, organization_id').eq('phone_number', from).single();
+        const { data: student, error: studentError } = await supabaseAdmin.from('students').select('id, name, organization_id, organizations(name, subscription_status, trial_expires_at)').eq('phone_number', from).single();
         if (studentError || !student) {
-            const twiml = createTwiMLResponse1("Olá! 👋 Não encontrei seu cadastro. Por favor, verifique se o número está correto ou fale com a recepção, combinado? 😉");
+            const twiml = createTwiMLResponse("Olá! 👋 Não encontrei seu cadastro. Por favor, verifique se o número está correto ou fale com a recepção, combinado? 😉");
             return new Response(twiml, {
                 headers: {
                     ...corsHeaders,
@@ -273,6 +273,14 @@ Deno.serve(async (req) => {
                 }
             });
         }
+
+        // @ts-ignore
+        if (student.organizations.subscription_status === 'inactive' || new Date(student.organizations.trial_expires_at) < new Date()) {
+            // @ts-ignore
+            const twiml = createTwiMLResponse(`Olá! A assinatura da ${student.organizations.name} com o TreineAI foi desativada. Por favor, entre em contato com eles para mais informações.`);
+            return new Response(twiml, { headers: { ...corsHeaders, 'Content-Type': 'text/xml' } });
+        }
+
         let { data: interaction } = await supabaseAdmin.from('student_coach_interactions').select('*').eq('student_phone_number', from).single();
         if (!interaction) {
             const { data: newInteraction } = await supabaseAdmin.from('student_coach_interactions').insert({
@@ -363,7 +371,7 @@ Deno.serve(async (req) => {
                 responseMessage = "Não entendi o que você quis dizer. 🤔 Pode tentar de outra forma?";
             }
         }
-        const twiml = createTwiMLResponse1(responseMessage);
+        const twiml = createTwiMLResponse(responseMessage);
         return new Response(twiml, {
             headers: {
                 ...corsHeaders,

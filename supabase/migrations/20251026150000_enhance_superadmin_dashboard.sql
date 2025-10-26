@@ -6,6 +6,9 @@ ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE public.profiles
 ADD COLUMN IF NOT EXISTS last_sign_in_at TIMESTAMPTZ;
 
+-- Remove a função se ela já existir para evitar conflitos
+DROP FUNCTION IF EXISTS public.get_all_organization_stats();
+
 -- Função para buscar dados agregados de todas as organizações para o painel do super admin.
 CREATE OR REPLACE FUNCTION public.get_all_organization_stats()
 RETURNS TABLE(
@@ -19,7 +22,9 @@ RETURNS TABLE(
   owner_is_active BOOLEAN,
   student_count BIGINT,
   total_enrollment_revenue NUMERIC,
-  total_product_revenue NUMERIC
+  total_product_revenue NUMERIC,
+  subscription_status TEXT,
+  trial_expires_at TIMESTAMPTZ
 )
 LANGUAGE plpgsql
 SECURITY DEFINER -- Importante para permitir que a função acesse tabelas com RLS.
@@ -37,12 +42,14 @@ BEGIN
     o.created_at AS org_created_at,
     p.id AS owner_id,
     p.full_name AS owner_name,
-    u.email::TEXT AS owner_email, -- CORREÇÃO: Converte o tipo da coluna email para TEXT
+    u.email::TEXT AS owner_email,
     u.last_sign_in_at AS owner_last_sign_in_at,
     p.is_active,
     (SELECT COUNT(*) FROM public.students s WHERE s.organization_id = o.id) AS student_count,
     COALESCE((SELECT SUM(e.price) FROM public.enrollments e JOIN public.students s ON e.student_id = s.id WHERE s.organization_id = o.id), 0) AS total_enrollment_revenue,
-    COALESCE((SELECT SUM(sa.total_price) FROM public.sales sa WHERE sa.organization_id = o.id), 0) AS total_product_revenue
+    COALESCE((SELECT SUM(sa.total_price) FROM public.sales sa WHERE sa.organization_id = o.id), 0) AS total_product_revenue,
+    o.subscription_status,
+    o.trial_expires_at
   FROM
     public.organizations o
   LEFT JOIN

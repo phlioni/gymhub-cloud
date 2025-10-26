@@ -22,6 +22,8 @@ export interface OrganizationStats {
   student_count: number;
   total_enrollment_revenue: number;
   total_product_revenue: number;
+  subscription_status: 'trial' | 'active' | 'inactive' | 'overdue';
+  trial_expires_at: string | null;
 }
 
 const SuperAdmin = () => {

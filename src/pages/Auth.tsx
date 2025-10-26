@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,36 +7,58 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import gymhubLogo from "@/assets/gymhub-logo.png";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    const status = searchParams.get('status');
+    if (status === 'inactive' || status === 'overdue') {
+      setAuthError("Sua conta foi suspensa por falta de pagamento. Agradecemos por utilizar o TreineAI e esperamos vê-lo de volta em breve!");
+    }
+
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { data: profile } = await supabase
+          // @ts-ignore
           .from('profiles')
-          .select('role')
+          .select('role, organization_id, organizations(subscription_status)')
           .eq('id', session.user.id)
           .single();
 
         if (profile?.role === 'superadmin') {
           navigate('/super-admin');
-        } else {
+          return;
+        }
+
+        // @ts-ignore
+        const subStatus = profile?.organizations?.subscription_status;
+        if (subStatus === 'inactive' || subStatus === 'overdue') {
+          await supabase.auth.signOut();
+          navigate(`/login?status=${subStatus}`, { replace: true });
+          return;
+        }
+
+        if (profile?.organization_id) {
           navigate('/dashboard');
         }
       }
     };
     checkUser();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setAuthError(null);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -48,19 +70,32 @@ const Auth = () => {
 
       if (data.session) {
         const { data: profile } = await supabase
+          // @ts-ignore
           .from('profiles')
-          .select('role')
+          .select('role, organization_id, organizations(subscription_status)')
           .eq('id', data.session.user.id)
           .single();
 
         if (profile?.role === 'superadmin') {
           navigate('/super-admin');
-        } else {
+          return;
+        }
+
+        // @ts-ignore
+        const subStatus = profile?.organizations?.subscription_status;
+        if (subStatus === 'inactive' || subStatus === 'overdue') {
+          await supabase.auth.signOut();
+          setAuthError("Sua conta foi suspensa por falta de pagamento. Agradecemos por utilizar o TreineAI e esperamos vê-lo de volta em breve!");
+          return;
+        }
+
+        if (profile?.organization_id) {
           navigate('/dashboard');
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "Ocorreu um erro");
+      setAuthError(error.message || "E-mail ou senha inválidos.");
+      toast.error(error.message || "E-mail ou senha inválidos.");
     } finally {
       setLoading(false);
     }
@@ -81,6 +116,15 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {authError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Acesso Suspenso</AlertTitle>
+              <AlertDescription>
+                {authError}
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

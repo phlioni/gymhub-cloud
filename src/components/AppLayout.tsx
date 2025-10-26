@@ -1,4 +1,3 @@
-// src/components/AppLayout.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +16,7 @@ import {
     CheckCheck,
     Calendar,
     Weight,
-    Bot, // <<< 1. Importar novo ícone para o Assistente
+    Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -30,7 +29,6 @@ interface AppLayoutData {
     } | null;
 }
 
-// <<< 2. Adicionar "Assistente IA" à navegação
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Alunos", href: "/students", icon: Users },
@@ -39,7 +37,7 @@ const navigation = [
     { name: "Agendamentos", href: "/scheduling", icon: Calendar },
     { name: "Treinos", href: "/workouts", icon: Weight },
     { name: "Check-ins", href: "/check-ins", icon: CheckCheck },
-    { name: "Assistente IA", href: "/ai-assistant", icon: Bot }, // <<< Novo item aqui
+    { name: "Assistente IA", href: "/ai-assistant", icon: Bot },
     { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
@@ -55,12 +53,22 @@ export default function AppLayout() {
         try {
             const { data: profile, error: profileError } = await supabase
                 .from("profiles")
-                .select("role, organization_id")
+                // @ts-ignore
+                .select("role, organization_id, is_active, organizations(subscription_status)")
                 .eq("id", userId)
                 .single();
 
             if (profileError || !profile) {
                 throw new Error(profileError?.message || "Perfil não encontrado.");
+            }
+
+            // @ts-ignore
+            const subStatus = profile.organizations?.subscription_status;
+            if (!profile.is_active || subStatus === 'inactive' || subStatus === 'overdue') {
+                await supabase.auth.signOut();
+                toast.error("Sua conta foi desativada ou sua assinatura expirou.");
+                navigate(`/login?status=${subStatus || 'inactive'}`, { replace: true });
+                return null;
             }
 
             if (profile.role === "superadmin") {
@@ -140,13 +148,40 @@ export default function AppLayout() {
             authSubscription = listener.subscription;
         });
 
+        const profileSubscription = supabase.channel('public:profiles')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser?.id}` }, (payload) => {
+                if (payload.new.is_active === false) {
+                    toast.warning("Sua conta foi desativada. Você será desconectado.");
+                    setTimeout(() => {
+                        supabase.auth.signOut();
+                        navigate('/', { replace: true });
+                    }, 2000);
+                }
+            })
+            .subscribe();
+
+        const orgSubscription = supabase.channel('public:organizations')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'organizations' }, (payload) => {
+                // @ts-ignore
+                if (payload.new.id === data?.organization?.id && (payload.new.subscription_status === 'inactive' || payload.new.subscription_status === 'overdue')) {
+                    toast.warning("A assinatura da sua organização expirou. Você será desconectado.");
+                    setTimeout(() => {
+                        supabase.auth.signOut();
+                        navigate(`/login?status=${payload.new.subscription_status}`, { replace: true });
+                    }, 2000);
+                }
+            })
+            .subscribe();
+
         return () => {
             isMounted = false;
             if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
                 authSubscription.unsubscribe();
             }
+            supabase.removeChannel(profileSubscription);
+            supabase.removeChannel(orgSubscription);
         };
-    }, [navigate, checkUserProfileAndOrg]);
+    }, [navigate, checkUserProfileAndOrg, currentUser?.id, data]);
 
 
     if (loading && !currentUser) {

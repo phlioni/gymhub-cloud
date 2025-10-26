@@ -21,11 +21,19 @@ Deno.serve(async (req) => {
     if (existingUser) {
       throw new Error("Um usuário com este e-mail já está registrado.");
     }
-    // 2. Se nenhum usuário existir, prossegue para criar a organização
+
+    // 2. Se nenhum usuário existir, prossegue para criar a organização com o período de trial
+    const trialExpiresAt = new Date();
+    trialExpiresAt.setDate(trialExpiresAt.getDate() + 60); // Adiciona 60 dias de trial
+
     const { data: orgData, error: orgError } = await supabaseClient.from('organizations').insert({
-      name: orgName
+      name: orgName,
+      subscription_status: 'trial',
+      trial_expires_at: trialExpiresAt.toISOString()
     }).select().single();
+
     if (orgError) throw orgError;
+
     // 3. Cria o novo usuário administrador na autenticação
     const { data: userData, error: userError } = await supabaseClient.auth.admin.createUser({
       email: adminEmail,
@@ -37,11 +45,13 @@ Deno.serve(async (req) => {
         role: 'admin'
       }
     });
+
     if (userError) {
       // Se a criação do usuário falhar, desfaz a criação da organização.
       await supabaseClient.from('organizations').delete().eq('id', orgData.id);
       throw userError;
     }
+
     // Se tudo correu bem, retorna sucesso.
     return new Response(JSON.stringify({
       success: true,
