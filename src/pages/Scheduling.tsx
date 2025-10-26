@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { AddAppointmentDialog } from "@/components/scheduling/AddAppointmentDial
 import { Skeleton } from "@/components/ui/skeleton";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from 'date-fns/locale';
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 interface Appointment {
     id: string;
@@ -23,36 +23,22 @@ interface Appointment {
 }
 
 const Scheduling = () => {
+    const { organizationId, loading: authLoading } = useAuthProtection();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [appointments, setAppointments] = useState<Appointment[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [appointmentsLoading, setAppointmentsLoading] = useState(true);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-    const [organizationId, setOrganizationId] = useState<string | null>(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
-        const checkAuthAndFetchData = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                navigate('/');
-                return;
-            }
-            const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', session.user.id).single();
-            if (profile?.organization_id) {
-                setOrganizationId(profile.organization_id);
-                fetchAppointments(currentMonth, profile.organization_id);
-            } else {
-                setLoading(false);
-                toast.error("Organização não encontrada.");
-            }
-        };
-        checkAuthAndFetchData();
-    }, [currentMonth, navigate]);
+        if (organizationId) {
+            fetchAppointments(currentMonth, organizationId);
+        }
+    }, [currentMonth, organizationId]);
 
     const fetchAppointments = async (date: Date, orgId: string) => {
-        setLoading(true);
+        setAppointmentsLoading(true);
         const start = startOfMonth(date);
         const end = endOfMonth(date);
 
@@ -70,7 +56,7 @@ const Scheduling = () => {
         } catch (error: any) {
             toast.error("Falha ao carregar agendamentos.");
         } finally {
-            setLoading(false);
+            setAppointmentsLoading(false);
         }
     };
 
@@ -109,6 +95,7 @@ const Scheduling = () => {
     }, [selectedDate, appointments]);
 
     const daysWithAppointments = useMemo(() => appointments.map(app => new Date(app.start_time)), [appointments]);
+    const isLoading = authLoading || appointmentsLoading;
 
     return (
         <>
@@ -132,7 +119,6 @@ const Scheduling = () => {
                     <Card>
                         <CardContent className="p-2 md:p-4">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:items-start">
-                                {/* AJUSTE APLICADO AQUI: Removido 'flex' e 'justify-center' para permitir que o calendário ocupe o espaço */}
                                 <div className="lg:col-span-1">
                                     <Calendar
                                         mode="single"
@@ -160,6 +146,7 @@ const Scheduling = () => {
                                                 fontWeight: '600'
                                             }
                                         }}
+                                        disabled={isLoading}
                                     />
                                 </div>
                                 <div className="lg:col-span-2">
@@ -168,7 +155,7 @@ const Scheduling = () => {
                                         <CardDescription>Clique em um agendamento para editar ou excluir.</CardDescription>
                                     </CardHeader>
                                     <CardContent className="h-[350px] overflow-y-auto pr-2">
-                                        {loading ? <Skeleton className="h-full w-full" /> :
+                                        {isLoading ? <Skeleton className="h-full w-full" /> :
                                             appointmentsOnSelectedDay.length > 0 ? (
                                                 <div className="space-y-3">
                                                     {appointmentsOnSelectedDay.map(app => (

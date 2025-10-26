@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -7,41 +6,22 @@ import { ModalitiesTable } from "@/components/modalities/ModalitiesTable";
 import { AddModalityDialog } from "@/components/modalities/AddModalityDialog";
 import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 const Modalities = () => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const { organizationId, loading: authLoading } = useAuthProtection();
+  const [modalitiesLoading, setModalitiesLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [modalities, setModalities] = useState([]);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [modalities, setModalities] = useState<any[]>([]);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/');
-      return;
+    if (organizationId) {
+      loadModalities();
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('organization_id, role')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profile?.role === 'superadmin') {
-      navigate('/super-admin');
-      return;
-    }
-
-    setOrganizationId(profile?.organization_id || null);
-    loadModalities();
-  };
+  }, [organizationId]);
 
   const loadModalities = async () => {
+    setModalitiesLoading(true);
     try {
       const { data, error } = await supabase
         .from('modalities')
@@ -54,9 +34,11 @@ const Modalities = () => {
       toast.error("Falha ao carregar as modalidades");
       console.error(error);
     } finally {
-      setLoading(false);
+      setModalitiesLoading(false);
     }
   };
+
+  const isLoading = authLoading || modalitiesLoading;
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
@@ -79,7 +61,7 @@ const Modalities = () => {
 
           <ModalitiesTable
             modalities={modalities}
-            loading={loading}
+            loading={isLoading}
             onRefresh={loadModalities}
           />
 

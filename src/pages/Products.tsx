@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,43 +7,23 @@ import { ProductsTable } from "@/components/products/ProductsTable";
 import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 const Products = () => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const { organizationId, loading: authLoading } = useAuthProtection();
+  const [productsLoading, setProductsLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/');
-      return;
+    if (organizationId) {
+      loadProducts();
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('organization_id, role')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profile?.role === 'superadmin') {
-      navigate('/super-admin');
-      return;
-    }
-
-    setOrganizationId(profile?.organization_id || null);
-    loadProducts();
-  };
+  }, [organizationId]);
 
   const loadProducts = async () => {
-    setLoading(true);
+    setProductsLoading(true);
     try {
       const { data, error } = await supabase
         .from('products')
@@ -56,7 +35,7 @@ const Products = () => {
     } catch (error: any) {
       toast.error("Falha ao carregar os produtos");
     } finally {
-      setLoading(false);
+      setProductsLoading(false);
     }
   };
 
@@ -68,6 +47,8 @@ const Products = () => {
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [products, searchTerm]);
+
+  const isLoading = authLoading || productsLoading;
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
@@ -101,7 +82,7 @@ const Products = () => {
 
           <ProductsTable
             products={filteredProducts}
-            loading={loading}
+            loading={isLoading}
             onRefresh={loadProducts}
             organizationId={organizationId}
           />

@@ -1,22 +1,23 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, CheckCircle, Calendar as CalendarIcon, MessageCircle, Zap } from "lucide-react"; // Importar ícones novos
+import { Search, CheckCircle, Calendar as CalendarIcon, MessageCircle, Zap } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 
 interface CheckIn {
     id: string;
     checked_in_at: string;
-    source: 'WhatsApp' | 'Gympass' | 'TotalPass' | 'Manual' | null; // <-- NOVO CAMPO
+    source: 'WhatsApp' | 'Gympass' | 'TotalPass' | 'Manual' | null;
     students: {
         name: string;
         phone_number: string | null;
@@ -28,7 +29,6 @@ interface CheckIn {
     };
 }
 
-// Função auxiliar para ícone
 const getSourceIcon = (source: CheckIn['source']) => {
     switch (source) {
         case 'Gympass':
@@ -45,19 +45,20 @@ const getSourceIcon = (source: CheckIn['source']) => {
 }
 
 const CheckIns = () => {
-    const [loading, setLoading] = useState(true);
+    const { loading: authLoading } = useAuthProtection();
+    const [checkinsLoading, setCheckinsLoading] = useState(true);
     const [checkins, setCheckins] = useState<CheckIn[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
     useEffect(() => {
-        if (selectedDate) {
+        if (!authLoading && selectedDate) {
             loadCheckins(selectedDate);
         }
-    }, [selectedDate]);
+    }, [selectedDate, authLoading]);
 
     const loadCheckins = async (date: Date) => {
-        setLoading(true);
+        setCheckinsLoading(true);
         try {
             const startDate = startOfDay(date).toISOString();
             const endDate = endOfDay(date).toISOString();
@@ -85,7 +86,7 @@ const CheckIns = () => {
         } catch (error: any) {
             toast.error("Falha ao carregar os check-ins");
         } finally {
-            setLoading(false);
+            setCheckinsLoading(false);
         }
     };
 
@@ -100,7 +101,6 @@ const CheckIns = () => {
 
     const getModalityName = (student: CheckIn['students']) => {
         if (student.enrollments && student.enrollments.length > 0) {
-            // Pega a primeira modalidade encontrada na matrícula do aluno
             const firstModality = student.enrollments.find(e => e.modalities)?.modalities;
             return firstModality?.name || 'Não especificada';
         }
@@ -109,6 +109,7 @@ const CheckIns = () => {
 
     const formatDate = (dateString: string) => format(parseISO(dateString), "dd/MM/yyyy", { locale: ptBR });
     const formatTime = (dateString: string) => format(parseISO(dateString), "HH:mm", { locale: ptBR });
+    const isLoading = authLoading || checkinsLoading;
 
     return (
         <main className="flex-1 p-4 md:p-8">
@@ -158,11 +159,10 @@ const CheckIns = () => {
                     </div>
                 </div>
 
-                {loading ? (
+                {isLoading ? (
                     <Skeleton className="h-64 w-full" />
                 ) : (
                     <>
-                        {/* Tabela para Web */}
                         <div className="hidden md:block">
                             <Card>
                                 <Table>
@@ -172,7 +172,7 @@ const CheckIns = () => {
                                             <TableHead>Modalidade</TableHead>
                                             <TableHead>Data</TableHead>
                                             <TableHead>Horário</TableHead>
-                                            <TableHead>Origem</TableHead> {/* <-- NOVA COLUNA */}
+                                            <TableHead>Origem</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -183,7 +183,7 @@ const CheckIns = () => {
                                                     <TableCell>{getModalityName(checkin.students)}</TableCell>
                                                     <TableCell>{formatDate(checkin.checked_in_at)}</TableCell>
                                                     <TableCell>{formatTime(checkin.checked_in_at)}</TableCell>
-                                                    <TableCell>{getSourceIcon(checkin.source)}</TableCell> {/* <-- EXIBIÇÃO DO ÍCONE */}
+                                                    <TableCell>{getSourceIcon(checkin.source)}</TableCell>
                                                 </TableRow>
                                             ))
                                         ) : (
@@ -197,15 +197,13 @@ const CheckIns = () => {
                                 </Table>
                             </Card>
                         </div>
-
-                        {/* Cards para Mobile */}
                         <div className="grid gap-4 md:hidden">
                             {filteredCheckins.length > 0 ? (
                                 filteredCheckins.map((checkin) => (
                                     <Card key={checkin.id}>
                                         <CardHeader className="flex flex-row items-center gap-4 space-y-0">
                                             <div className="p-3 bg-muted rounded-full">
-                                                {getSourceIcon(checkin.source)} {/* <-- EXIBIÇÃO DO ÍCONE */}
+                                                {getSourceIcon(checkin.source)}
                                             </div>
                                             <div>
                                                 <CardTitle className="text-lg">{checkin.students.name}</CardTitle>
