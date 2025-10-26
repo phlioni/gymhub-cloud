@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Session, User, AuthSubscription } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 
 interface AppLayoutData {
     organization: {
@@ -49,74 +49,107 @@ export default function AppLayout() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const navigate = useNavigate();
 
-    const handleAuthChange = useCallback(async (session: Session | null) => {
-        if (!session) {
-            setData(null);
-            setCurrentUser(null);
-            setLoading(false);
-            navigate('/', { replace: true });
-            return;
+    const handleSignOut = useCallback(async (message?: string) => {
+        if (message) {
+            toast.error(message);
         }
+        await supabase.auth.signOut();
+        navigate('/', { replace: true });
+    }, [navigate]);
 
-        // Evita reprocessar se o usuário já estiver definido e for o mesmo
-        if (currentUser && session.user.id === currentUser.id) {
-            setLoading(false);
-            return;
-        }
+    useEffect(() => {
+        let isMounted = true;
 
-        setLoading(true);
+        const checkSessionAndProfile = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!isMounted) return;
 
-        try {
-            const { data: profile, error: profileError } = await supabase
-                .from("profiles")
-                // @ts-ignore
-                .select("role, organization_id, is_active, organizations(id, name, logo_url, subscription_status)")
-                .eq("id", session.user.id)
-                .single();
-
-            if (profileError || !profile) {
-                throw new Error(profileError?.message || "Perfil não encontrado.");
-            }
-
-            if (!profile.is_active) {
-                throw new Error("Sua conta foi desativada por um administrador.");
-            }
-
-            // @ts-ignore
-            const subStatus = profile.organizations?.subscription_status;
-            if (subStatus === 'inactive' || subStatus === 'overdue') {
-                throw new Error("A assinatura da sua organização expirou.");
-            }
-
-            if (profile.role === "superadmin") {
-                navigate("/super-admin", { replace: true });
+            if (!session) {
+                navigate('/', { replace: true });
+                setLoading(false);
                 return;
             }
 
-            if (!profile.organization_id) {
-                throw new Error("Perfil incompleto ou organização não associada.");
+            try {
+                const { data: profile, error: profileError } = await supabase
+                    .from("profiles")
+                    // @ts-ignore
+                    .select("role, organization_id, is_active, organizations(id, name, logo_url, subscription_status)")
+                    .eq("id", session.user.id)
+                    .single();
+
+                if (profileError || !profile) throw new Error("Perfil não encontrado.");
+                if (!profile.is_active) throw new Error("Sua conta foi desativada.");
+
+                const orgData = profile.organizations as AppLayoutData['organization'];
+                const subStatus = orgData?.subscription_status;
+                if (subStatus === 'inactive' || subStatus === 'overdue') {
+                    throw new Error("A assinatura da sua organização expirou.");
+                }
+
+                if (profile.role === 'superadmin') {
+                    navigate('/super-admin', { replace: true });
+                    return;
+                }
+
+                if (!profile.organization_id || !orgData) throw new Error("Organização não encontrada.");
+
+                setCurrentUser(session.user);
+                setData({ organization: orgData });
+
+            } catch (error: any) {
+                handleSignOut(error.message);
+            } finally {
+                if (isMounted) setLoading(false);
             }
+        };
 
-            setCurrentUser(session.user);
-            // @ts-ignore
-            setData({ organization: profile.organizations });
-        } catch (error: any) {
-            toast.error(error.message);
-            await supabase.auth.signOut();
-        } finally {
-            setLoading(false);
-        }
-    }, [navigate, currentUser]);
+        checkSessionAndProfile();
 
-    useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            handleAuthChange(session);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_OUT') {
+                setCurrentUser(null);
+                setData(null);
+                navigate('/', { replace: true });
+            }
         });
 
         return () => {
+            isMounted = false;
             subscription.unsubscribe();
         };
-    }, [handleAuthChange]);
+    }, [navigate, handleSignOut]);
+
+    // Realtime subscriptions
+    useEffect(() => {
+        if (!currentUser?.id) return;
+
+        const profileChannel = supabase.channel(`public:profiles:id=eq.${currentUser.id}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+                if (payload.new.is_active === false) {
+                    handleSignOut("Sua conta foi desativada por um administrador.");
+                }
+            })
+            .subscribe();
+
+        const orgId = data?.organization?.id;
+        let orgChannel;
+        if (orgId) {
+            orgChannel = supabase.channel(`public:organizations:id=eq.${orgId}`)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'organizations' }, (payload) => {
+                    const newStatus = payload.new.subscription_status;
+                    if (newStatus === 'inactive' || newStatus === 'overdue') {
+                        handleSignOut("A assinatura da sua organização expirou.");
+                    }
+                })
+                .subscribe();
+        }
+
+        return () => {
+            supabase.removeChannel(profileChannel);
+            if (orgChannel) supabase.removeChannel(orgChannel);
+        };
+    }, [currentUser, data, handleSignOut]);
 
 
     if (loading) {
@@ -133,15 +166,12 @@ export default function AppLayout() {
     }
 
     if (!currentUser || !data) {
-        // Se não estiver carregando e não houver usuário/dados, o onAuthStateChange já terá redirecionado.
-        // Retornar null evita renderizar o layout antes do redirecionamento ser concluído.
         return null;
     }
 
     return (
         <div className="flex min-h-screen w-full bg-muted/30">
             <DesktopSidebar data={data} setMobileMenuOpen={setMobileMenuOpen} />
-
             <div className="flex flex-col flex-1">
                 <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">
                     <Sheet open={isMobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -157,7 +187,6 @@ export default function AppLayout() {
                     </Sheet>
                     <h1 className="text-lg font-semibold">{data?.organization?.name || "TreineAI"}</h1>
                 </header>
-
                 <div className="flex-1 overflow-y-auto">
                     <Outlet />
                 </div>
