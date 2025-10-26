@@ -24,6 +24,7 @@ import { Session, User, AuthSubscription } from '@supabase/supabase-js';
 
 interface AppLayoutData {
     organization: {
+        id: string; // Adicionado para a subscrição de realtime
         name: string;
         logo_url: string | null;
     } | null;
@@ -54,7 +55,7 @@ export default function AppLayout() {
             const { data: profile, error: profileError } = await supabase
                 .from("profiles")
                 // @ts-ignore
-                .select("role, organization_id, is_active, organizations(subscription_status)")
+                .select("role, organization_id, is_active, organizations(id, name, logo_url, subscription_status)")
                 .eq("id", userId)
                 .single();
 
@@ -62,12 +63,21 @@ export default function AppLayout() {
                 throw new Error(profileError?.message || "Perfil não encontrado.");
             }
 
+            // Verifica se o perfil do usuário está inativo
+            if (!profile.is_active) {
+                await supabase.auth.signOut();
+                toast.error("Sua conta foi desativada por um administrador.");
+                navigate(`/login?status=disabled`, { replace: true });
+                return null;
+            }
+
+            // Verifica o status da assinatura da organização
             // @ts-ignore
             const subStatus = profile.organizations?.subscription_status;
-            if (!profile.is_active || subStatus === 'inactive' || subStatus === 'overdue') {
+            if (subStatus === 'inactive' || subStatus === 'overdue') {
                 await supabase.auth.signOut();
-                toast.error("Sua conta foi desativada ou sua assinatura expirou.");
-                navigate(`/login?status=${subStatus || 'inactive'}`, { replace: true });
+                toast.error("A assinatura da sua organização expirou.");
+                navigate(`/login?status=${subStatus}`, { replace: true });
                 return null;
             }
 
@@ -80,28 +90,17 @@ export default function AppLayout() {
                 throw new Error("Perfil incompleto ou organização não associada.");
             }
 
-            if (!data || !data.organization || data.organization === null) {
-                const { data: orgData, error: orgError } = await supabase
-                    .from("organizations")
-                    .select("name, logo_url")
-                    .eq("id", profile.organization_id)
-                    .single();
-
-                if (orgError || !orgData) {
-                    throw new Error(orgError?.message || "Organização não encontrada.");
-                }
-                return { organization: orgData };
-            }
-            return data;
+            // @ts-ignore
+            return { organization: profile.organizations };
 
         } catch (error: any) {
             console.error("Erro ao verificar perfil/organização:", error.message);
             await supabase.auth.signOut();
-            toast.error("Erro ao carregar dados: " + error.message);
+            toast.error("Erro de sessão: " + error.message);
             navigate('/', { replace: true });
             return null;
         }
-    }, [navigate, data]);
+    }, [navigate]);
 
 
     useEffect(() => {
@@ -115,7 +114,7 @@ export default function AppLayout() {
             if (session?.user) {
                 setCurrentUser(session.user);
                 const fetchedData = await checkUserProfileAndOrg(session.user.id);
-                if (isMounted && fetchedData !== null) {
+                if (isMounted && fetchedData) {
                     setData(fetchedData);
                 }
             } else {
@@ -130,61 +129,52 @@ export default function AppLayout() {
             initialize(session);
 
             const { data: listener } = supabase.auth.onAuthStateChange(
-                (event, session) => {
+                (_event, session) => {
                     if (!isMounted) return;
-
-                    if (event === 'SIGNED_OUT') {
-                        setCurrentUser(null);
-                        setData(null);
-                        toast.success("Você saiu com segurança.");
-                        setLoading(false);
-                        navigate('/');
-
-                    } else if (event === 'SIGNED_IN' && session?.user) {
-                        initialize(session);
-                    }
+                    initialize(session);
                 }
             );
             authSubscription = listener.subscription;
         });
 
+        // Realtime para deslogar se o perfil for desativado
         const profileSubscription = supabase.channel('public:profiles')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser?.id}` }, (payload) => {
                 if (payload.new.is_active === false) {
                     toast.warning("Sua conta foi desativada. Você será desconectado.");
                     setTimeout(() => {
                         supabase.auth.signOut();
-                        navigate('/', { replace: true });
                     }, 2000);
                 }
             })
             .subscribe();
 
-        const orgSubscription = supabase.channel('public:organizations')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'organizations' }, (payload) => {
-                // @ts-ignore
-                if (payload.new.id === data?.organization?.id && (payload.new.subscription_status === 'inactive' || payload.new.subscription_status === 'overdue')) {
+        // Realtime para deslogar se a assinatura da organização expirar
+        const orgId = data?.organization?.id;
+        const orgSubscription = orgId ? supabase.channel(`public:organizations:id=eq.${orgId}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'organizations', filter: `id=eq.${orgId}` }, (payload) => {
+                const newStatus = payload.new.subscription_status;
+                if (newStatus === 'inactive' || newStatus === 'overdue') {
                     toast.warning("A assinatura da sua organização expirou. Você será desconectado.");
                     setTimeout(() => {
                         supabase.auth.signOut();
-                        navigate(`/login?status=${payload.new.subscription_status}`, { replace: true });
                     }, 2000);
                 }
             })
-            .subscribe();
+            .subscribe() : null;
 
         return () => {
             isMounted = false;
-            if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
+            if (authSubscription) {
                 authSubscription.unsubscribe();
             }
-            supabase.removeChannel(profileSubscription);
-            supabase.removeChannel(orgSubscription);
+            if (profileSubscription) supabase.removeChannel(profileSubscription);
+            if (orgSubscription) supabase.removeChannel(orgSubscription);
         };
-    }, [navigate, checkUserProfileAndOrg, currentUser?.id, data]);
+    }, [navigate, checkUserProfileAndOrg, currentUser?.id, data?.organization?.id]);
 
 
-    if (loading && !currentUser) {
+    if (loading || !currentUser || !data) {
         return (
             <div className="flex h-screen bg-muted/30">
                 <div className="hidden md:flex flex-col w-72 p-4 space-y-4 border-r">
@@ -195,9 +185,6 @@ export default function AppLayout() {
                 <main className="flex-1 p-8"><Skeleton className="h-full w-full" /></main>
             </div>
         );
-    }
-    if (!loading && (!currentUser || !data)) {
-        return null;
     }
 
     return (
@@ -249,8 +236,6 @@ const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLay
         const { error } = await supabase.auth.signOut();
         if (error) {
             toast.error("Falha ao sair: " + error.message);
-        } else {
-            navigate('/login');
         }
     };
 
