@@ -24,7 +24,7 @@ import { Session, User, AuthSubscription } from '@supabase/supabase-js';
 
 interface AppLayoutData {
     organization: {
-        id: string; // Adicionado para a subscrição de realtime
+        id: string;
         name: string;
         logo_url: string | null;
     } | null;
@@ -42,7 +42,6 @@ const navigation = [
     { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
-
 export default function AppLayout() {
     const [data, setData] = useState<AppLayoutData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -50,131 +49,77 @@ export default function AppLayout() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const navigate = useNavigate();
 
-    const checkUserProfileAndOrg = useCallback(async (userId: string) => {
+    const handleAuthChange = useCallback(async (session: Session | null) => {
+        if (!session) {
+            setData(null);
+            setCurrentUser(null);
+            setLoading(false);
+            navigate('/', { replace: true });
+            return;
+        }
+
+        // Evita reprocessar se o usuário já estiver definido e for o mesmo
+        if (currentUser && session.user.id === currentUser.id) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+
         try {
             const { data: profile, error: profileError } = await supabase
                 .from("profiles")
                 // @ts-ignore
                 .select("role, organization_id, is_active, organizations(id, name, logo_url, subscription_status)")
-                .eq("id", userId)
+                .eq("id", session.user.id)
                 .single();
 
             if (profileError || !profile) {
                 throw new Error(profileError?.message || "Perfil não encontrado.");
             }
 
-            // Verifica se o perfil do usuário está inativo
             if (!profile.is_active) {
-                await supabase.auth.signOut();
-                toast.error("Sua conta foi desativada por um administrador.");
-                navigate(`/login?status=disabled`, { replace: true });
-                return null;
+                throw new Error("Sua conta foi desativada por um administrador.");
             }
 
-            // Verifica o status da assinatura da organização
             // @ts-ignore
             const subStatus = profile.organizations?.subscription_status;
             if (subStatus === 'inactive' || subStatus === 'overdue') {
-                await supabase.auth.signOut();
-                toast.error("A assinatura da sua organização expirou.");
-                navigate(`/login?status=${subStatus}`, { replace: true });
-                return null;
+                throw new Error("A assinatura da sua organização expirou.");
             }
 
             if (profile.role === "superadmin") {
                 navigate("/super-admin", { replace: true });
-                return null;
+                return;
             }
 
             if (!profile.organization_id) {
                 throw new Error("Perfil incompleto ou organização não associada.");
             }
 
+            setCurrentUser(session.user);
             // @ts-ignore
-            return { organization: profile.organizations };
-
+            setData({ organization: profile.organizations });
         } catch (error: any) {
-            console.error("Erro ao verificar perfil/organização:", error.message);
+            toast.error(error.message);
             await supabase.auth.signOut();
-            toast.error("Erro de sessão: " + error.message);
-            navigate('/', { replace: true });
-            return null;
+        } finally {
+            setLoading(false);
         }
-    }, [navigate]);
-
+    }, [navigate, currentUser]);
 
     useEffect(() => {
-        let isMounted = true;
-        let authSubscription: AuthSubscription | null = null;
-
-        const initialize = async (session: Session | null) => {
-            if (!isMounted) return;
-            setLoading(true);
-
-            if (session?.user) {
-                setCurrentUser(session.user);
-                const fetchedData = await checkUserProfileAndOrg(session.user.id);
-                if (isMounted && fetchedData) {
-                    setData(fetchedData);
-                }
-            } else {
-                setCurrentUser(null);
-                setData(null);
-                navigate('/', { replace: true });
-            }
-            if (isMounted) setLoading(false);
-        };
-
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            initialize(session);
-
-            const { data: listener } = supabase.auth.onAuthStateChange(
-                (_event, session) => {
-                    if (!isMounted) return;
-                    initialize(session);
-                }
-            );
-            authSubscription = listener.subscription;
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            handleAuthChange(session);
         });
 
-        // Realtime para deslogar se o perfil for desativado
-        const profileSubscription = supabase.channel('public:profiles')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser?.id}` }, (payload) => {
-                if (payload.new.is_active === false) {
-                    toast.warning("Sua conta foi desativada. Você será desconectado.");
-                    setTimeout(() => {
-                        supabase.auth.signOut();
-                    }, 2000);
-                }
-            })
-            .subscribe();
-
-        // Realtime para deslogar se a assinatura da organização expirar
-        const orgId = data?.organization?.id;
-        const orgSubscription = orgId ? supabase.channel(`public:organizations:id=eq.${orgId}`)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'organizations', filter: `id=eq.${orgId}` }, (payload) => {
-                const newStatus = payload.new.subscription_status;
-                if (newStatus === 'inactive' || newStatus === 'overdue') {
-                    toast.warning("A assinatura da sua organização expirou. Você será desconectado.");
-                    setTimeout(() => {
-                        supabase.auth.signOut();
-                    }, 2000);
-                }
-            })
-            .subscribe() : null;
-
         return () => {
-            isMounted = false;
-            if (authSubscription) {
-                authSubscription.unsubscribe();
-            }
-            if (profileSubscription) supabase.removeChannel(profileSubscription);
-            if (orgSubscription) supabase.removeChannel(orgSubscription);
+            subscription.unsubscribe();
         };
-    }, [navigate, checkUserProfileAndOrg, currentUser?.id, data?.organization?.id]);
+    }, [handleAuthChange]);
 
 
-    if (loading || !currentUser || !data) {
+    if (loading) {
         return (
             <div className="flex h-screen bg-muted/30">
                 <div className="hidden md:flex flex-col w-72 p-4 space-y-4 border-r">
@@ -185,6 +130,12 @@ export default function AppLayout() {
                 <main className="flex-1 p-8"><Skeleton className="h-full w-full" /></main>
             </div>
         );
+    }
+
+    if (!currentUser || !data) {
+        // Se não estiver carregando e não houver usuário/dados, o onAuthStateChange já terá redirecionado.
+        // Retornar null evita renderizar o layout antes do redirecionamento ser concluído.
+        return null;
     }
 
     return (
@@ -229,7 +180,6 @@ const MobileSidebar = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayo
 
 const SidebarContent = ({ data, onLinkClick, setMobileMenuOpen }: { data: AppLayoutData | null; onLinkClick?: () => void; setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>> }) => {
     const location = useLocation();
-    const navigate = useNavigate();
 
     const handleSignOut = async () => {
         setMobileMenuOpen(false);
