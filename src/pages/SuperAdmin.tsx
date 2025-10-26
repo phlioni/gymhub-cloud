@@ -1,18 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Plus, LogOut, Dumbbell } from "lucide-react";
+import { Building2, Plus, LogOut, Dumbbell, Search } from "lucide-react";
 import { OrganizationsTable } from "@/components/super-admin/OrganizationsTable";
 import { CreateOrganizationDialog } from "@/components/super-admin/CreateOrganizationDialog";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+
+// Define a interface para os dados agregados da organização
+export interface OrganizationStats {
+  org_id: string;
+  org_name: string;
+  org_created_at: string;
+  owner_id: string;
+  owner_name: string;
+  owner_email: string;
+  owner_last_sign_in_at: string | null;
+  owner_is_active: boolean;
+  student_count: number;
+  total_enrollment_revenue: number;
+  total_product_revenue: number;
+}
 
 const SuperAdmin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [organizations, setOrganizations] = useState([]);
+  const [organizations, setOrganizations] = useState<OrganizationStats[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -40,16 +57,15 @@ const SuperAdmin = () => {
   };
 
   const loadOrganizations = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Chama a nova função RPC para obter dados agregados
+      const { data, error } = await supabase.rpc('get_all_organization_stats');
 
       if (error) throw error;
       setOrganizations(data || []);
     } catch (error: any) {
-      toast.error("Falha ao carregar as organizações");
+      toast.error("Falha ao carregar as organizações", { description: error.message });
       console.error(error);
     } finally {
       setLoading(false);
@@ -64,6 +80,15 @@ const SuperAdmin = () => {
       navigate('/');
     }
   };
+
+  const filteredOrganizations = useMemo(() => {
+    if (!searchTerm) {
+      return organizations;
+    }
+    return organizations.filter(org =>
+      org.org_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [organizations, searchTerm]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
@@ -109,16 +134,27 @@ const SuperAdmin = () => {
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <h2 className="text-2xl font-bold">Organizações</h2>
-          <Button onClick={() => setShowCreateDialog(true)} size="lg">
-            <Plus className="h-5 w-5 mr-2" />
-            Criar Organização
-          </Button>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome..."
+                className="pl-10 h-11"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button onClick={() => setShowCreateDialog(true)} size="lg" className="h-11">
+              <Plus className="h-5 w-5 mr-2" />
+              Criar Organização
+            </Button>
+          </div>
         </div>
 
         <OrganizationsTable
-          organizations={organizations}
+          organizations={filteredOrganizations}
           loading={loading}
           onRefresh={loadOrganizations}
         />
