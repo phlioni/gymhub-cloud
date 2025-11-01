@@ -50,6 +50,12 @@ const Settings = () => {
   const [isGympassHelpOpen, setGympassHelpOpen] = useState(false);
   const [isTotalPassHelpOpen, setTotalPassHelpOpen] = useState(false);
 
+  // --- INÍCIO: NOVOS ESTADOS PARA O STRIPE ---
+  const [stripeOnboardingLoading, setStripeOnboardingLoading] = useState(false);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<string | null>(null);
+  // --- FIM: NOVOS ESTADOS PARA O STRIPE ---
+
   useEffect(() => {
     if (organizationId) {
       loadOrganizationData();
@@ -83,6 +89,11 @@ const Settings = () => {
           totalpassIntegrationCode: orgData.totalpass_integration_code || "",
           webhookUrl: `${SUPABASE_URL}/functions/v1/checkin-integration`,
         });
+
+        // --- INÍCIO: POPULAR ESTADOS DO STRIPE ---
+        setStripeAccountId(orgData.stripe_account_id);
+        setStripeAccountStatus(orgData.stripe_account_status);
+        // --- FIM: POPULAR ESTADOS DO STRIPE ---
       }
     }
     setDataLoading(false);
@@ -202,6 +213,31 @@ const Settings = () => {
     setReminderDays(newDays);
   };
 
+  // --- INÍCIO: NOVA FUNÇÃO HANDLER DO STRIPE ---
+  const handleStripeOnboarding = async () => {
+    setStripeOnboardingLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-stripe-connect-account');
+
+      if (error) throw error;
+      // @ts-ignore
+      if (data.error) throw new Error(data.error);
+
+      // @ts-ignore
+      if (data.onboardingUrl) {
+        // Redireciona o usuário para a página de onboarding do Stripe
+        window.location.href = data.onboardingUrl;
+      } else {
+        toast.error("Não foi possível iniciar a conexão com o Stripe.");
+      }
+    } catch (error: any) {
+      toast.error("Erro ao conectar com Stripe", { description: error.message });
+    } finally {
+      setStripeOnboardingLoading(false);
+    }
+  };
+  // --- FIM: NOVA FUNÇÃO HANDLER DO STRIPE ---
+
   const isLoading = authLoading || dataLoading;
 
   return (
@@ -277,8 +313,8 @@ const Settings = () => {
             <TabsContent value="integrations">
               <Card className="mt-4">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-accent" />Integração com Plataformas de Benefício</CardTitle>
-                  <CardDescription>Configure as credenciais para ativar o check-in automático via Gympass (Wellhub) e TotalPass.</CardDescription>
+                  <CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-accent" />Integrações</CardTitle>
+                  <CardDescription>Configure conexões com plataformas de benefício e sistemas de pagamento.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleIntegrationSubmit} className="space-y-6">
@@ -320,6 +356,37 @@ const Settings = () => {
                         <p className="text-xs text-muted-foreground">Este é o código alfanumérico da sua unidade no portal TotalPass.</p>
                       </div>
                     </div>
+
+                    {/* --- INÍCIO: BLOCO STRIPE CONNECT --- */}
+                    <Separator />
+                    <div className="space-y-4 border p-4 rounded-lg">
+                      <h4 className="font-semibold text-lg flex items-center gap-2">
+                        Stripe Connect (Pagamentos)
+                      </h4>
+                      {stripeAccountStatus === 'enabled' ? (
+                        <div className="flex items-center gap-2 text-green-600">
+                          <CheckCircle className="h-5 w-5" />
+                          <p className="font-medium">Sua conta Stripe está ativa e conectada!</p>
+                        </div>
+                      ) : stripeAccountId ? (
+                        <p className="text-sm text-muted-foreground">
+                          Sua conta Stripe está conectada mas pendente ({stripeAccountStatus}). Finalize o cadastro no Stripe.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Conecte sua conta Stripe para aceitar pagamentos de alunos (Cartão de Crédito, PIX, Boleto) e receber seus repasses rapidamente.
+                        </p>
+                      )}
+                      <Button
+                        type="button"
+                        onClick={handleStripeOnboarding}
+                        disabled={stripeOnboardingLoading || stripeAccountStatus === 'enabled'}
+                      >
+                        {stripeOnboardingLoading ? "Aguarde..." : (stripeAccountStatus === 'enabled' ? "Conta Conectada" : "Conectar com Stripe")}
+                      </Button>
+                    </div>
+                    {/* --- FIM: BLOCO STRIPE CONNECT --- */}
+
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={savingIntegrations}>{savingIntegrations ? "Salvando..." : "Salvar Integrações"}</Button>
                     </div>

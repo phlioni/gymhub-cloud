@@ -7,12 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// --- TIPO ATUALIZADO ---
 interface Product {
   id: string;
   name: string;
   price: number;
   quantity: number;
+  product_type: string; // Adicionado
 }
+// --- FIM DA ATUALIZAÇÃO ---
 
 interface SellProductDialogProps {
   product: Product;
@@ -33,8 +36,13 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
   useEffect(() => {
     if (open) {
       loadStudents();
+      // Garante que o tipo de produto é físico
+      if (product.product_type !== 'physical') {
+        toast.error("A venda rápida de estoque é apenas para produtos físicos.");
+        onOpenChange(false);
+      }
     }
-  }, [open]);
+  }, [open, product, onOpenChange]);
 
   const loadStudents = async () => {
     const { data } = await supabase.from('students').select('*').order('name');
@@ -95,9 +103,9 @@ export const SellProductDialog = ({ product, open, onOpenChange, organizationId,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Vender Produto</DialogTitle>
+          <DialogTitle>Vender Produto (Estoque)</DialogTitle>
           <DialogDescription>
-            Processando venda para {product.name}
+            Processando venda de estoque para {product.name}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
