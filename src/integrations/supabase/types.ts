@@ -151,6 +151,10 @@ export type Database = {
           totalpass_integration_code: string | null
           payment_details: string | null
           reminder_days: number[] | null
+          // --- INÍCIO DAS NOVAS COLUNAS ---
+          stripe_account_id: string | null
+          stripe_account_status: string | null
+          // --- FIM DAS NOVAS COLUNAS ---
         }
         Insert: {
           address?: string | null
@@ -168,6 +172,10 @@ export type Database = {
           totalpass_integration_code?: string | null
           payment_details?: string | null
           reminder_days?: number[] | null
+          // --- INÍCIO DAS NOVAS COLUNAS ---
+          stripe_account_id?: string | null
+          stripe_account_status?: string | null
+          // --- FIM DAS NOVAS COLUNAS ---
         }
         Update: {
           address?: string | null
@@ -185,10 +193,15 @@ export type Database = {
           totalpass_integration_code?: string | null
           payment_details?: string | null
           reminder_days?: number[] | null
+          // --- INÍCIO DAS NOVAS COLUNAS ---
+          stripe_account_id?: string | null
+          stripe_account_status?: string | null
+          // --- FIM DAS NOVAS COLUNAS ---
         }
         Relationships: []
       }
       products: {
+        // --- INÍCIO DAS MUDANÇAS ---
         Row: {
           brand: string | null
           created_at: string
@@ -197,6 +210,10 @@ export type Database = {
           organization_id: string
           price: number
           quantity: number
+          product_type: string // 'physical' | 'service'
+          recurring_interval: string | null // null | 'month' | 'year' etc.
+          stripe_product_id: string | null
+          stripe_price_id: string | null
         }
         Insert: {
           brand?: string | null
@@ -206,6 +223,10 @@ export type Database = {
           organization_id: string
           price: number
           quantity?: number
+          product_type?: string
+          recurring_interval?: string | null
+          stripe_product_id?: string | null
+          stripe_price_id?: string | null
         }
         Update: {
           brand?: string | null
@@ -215,7 +236,12 @@ export type Database = {
           organization_id?: string
           price?: number
           quantity?: number
+          product_type?: string
+          recurring_interval?: string | null
+          stripe_product_id?: string | null
+          stripe_price_id?: string | null
         }
+        // --- FIM DAS MUDANÇAS ---
         Relationships: [
           {
             foreignKeyName: "products_organization_id_fkey"
@@ -602,3 +628,4 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
   ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
   : never
+}

@@ -8,6 +8,7 @@ import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
+import { Session } from "@supabase/supabase-js"; // <-- 1. IMPORTAR SESSION
 
 const Products = () => {
   const { organizationId, loading: authLoading } = useAuthProtection();
@@ -15,6 +16,16 @@ const Products = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [session, setSession] = useState<Session | null>(null); // <-- 2. ADICIONAR ESTADO DA SESSÃO
+
+  // 3. BUSCAR A SESSÃO DO USUÁRIO
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+    };
+    getSession();
+  }, []);
 
   useEffect(() => {
     if (organizationId) {
@@ -57,10 +68,10 @@ const Products = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-2">
               <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight">
-                Produtos
+                Produtos e Serviços
               </h1>
               <p className="text-sm md:text-base text-muted-foreground">
-                Gerencie o inventário e as vendas
+                Gerencie o inventário e seu catálogo de pagamentos.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -85,6 +96,7 @@ const Products = () => {
             loading={isLoading}
             onRefresh={loadProducts}
             organizationId={organizationId}
+            session={session} // <-- 4. PASSAR SESSÃO PARA A TABELA
           />
 
           <AddProductDialog
@@ -92,6 +104,7 @@ const Products = () => {
             onOpenChange={setShowAddDialog}
             organizationId={organizationId}
             onSuccess={loadProducts}
+            session={session} // <-- 5. PASSAR SESSÃO PARA O DIÁLOGO
           />
         </div>
         <FloatingActionButton onClick={() => setShowAddDialog(true)} />
