@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Banknote, Percent, Clock, PiggyBank, ArrowDown } from "lucide-react";
+import { Banknote, Percent, Clock, PiggyBank, ArrowDown, Rocket } from "lucide-react";
 
 interface StripeHelpDialogProps {
     open: boolean;
@@ -17,111 +17,142 @@ interface StripeHelpDialogProps {
 }
 
 export const StripeHelpDialog = ({ open, onOpenChange }: StripeHelpDialogProps) => {
+    // Taxa da plataforma
     const PLATFORM_FEE_PERCENT = 0.05; // 5%
     const PLATFORM_FEE_DISPLAY = "5%";
 
-    // Valores baseados na sua documentação
+    // Taxas do Stripe (custo do usuário)
     const PIX_FEE_PERCENT = 0.0119; // 1.19%
     const CARD_FEE_PERCENT = 0.0399; // 3.99%
     const CARD_FEE_FIXED = 0.39; // R$ 0,39
     const BOLETO_FEE_FIXED = 3.45; // R$ 3,45
 
-    // Exemplo 1: PIX
-    const pixSale = 100.00;
-    const pixStripeFee = pixSale * PIX_FEE_PERCENT;
-    const pixPlatformFee = pixSale * PLATFORM_FEE_PERCENT;
-    const pixNet = pixSale - pixStripeFee - pixPlatformFee;
+    // Exemplos de cálculo
+    const saleAmount = 100.00;
 
-    // Exemplo 2: Cartão
-    const cardSale = 100.00;
-    const cardStripeFee = (cardSale * CARD_FEE_PERCENT) + CARD_FEE_FIXED;
-    const cardPlatformFee = cardSale * PLATFORM_FEE_PERCENT;
-    const cardNet = cardSale - cardStripeFee - cardPlatformFee;
+    // PIX
+    const pixStripeFee = saleAmount * PIX_FEE_PERCENT;
+    const pixPlatformFee = saleAmount * PLATFORM_FEE_PERCENT;
+    const pixNet = saleAmount - pixStripeFee - pixPlatformFee;
+
+    // Cartão
+    const cardStripeFee = (saleAmount * CARD_FEE_PERCENT) + CARD_FEE_FIXED;
+    const cardPlatformFee = saleAmount * PLATFORM_FEE_PERCENT;
+    const cardNet = saleAmount - cardStripeFee - cardPlatformFee;
+
+    // Boleto
+    const boletoStripeFee = BOLETO_FEE_FIXED;
+    const boletoPlatformFee = saleAmount * PLATFORM_FEE_PERCENT;
+    const boletoNet = saleAmount - boletoStripeFee - boletoPlatformFee;
 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+            <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Entendendo a Integração Financeira (Stripe)</DialogTitle>
                     <DialogDescription>
-                        Veja como funcionam as taxas, comissões e prazos de recebimento.
+                        Veja como funciona para você receber pagamentos e os detalhes sobre taxas e prazos.
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="flex-1 overflow-y-auto pr-4 pl-2">
                     <div className="space-y-6 py-4">
 
-                        {/* 1. Spread da Plataforma */}
-                        <div className="space-y-2">
-                            <h3 className="font-semibold flex items-center gap-2"><Percent className="h-5 w-5 text-primary" />Taxa da Plataforma (Spread TreineAI)</h3>
+                        {/* 1. Por que Conectar? */}
+                        <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                            <h3 className="font-semibold flex items-center gap-2 text-base text-primary"><Rocket className="h-5 w-5" />Por que conectar sua conta Stripe?</h3>
                             <p className="text-sm text-muted-foreground">
-                                Para cobrir os custos de manutenção, automação (WhatsApp) e a infraestrutura dos pagamentos, o TreineAI retém uma taxa de <Badge variant="default">{PLATFORM_FEE_DISPLAY}</Badge> sobre cada transação bem-sucedida.
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                Esta taxa é calculada sobre o valor total da venda e descontada automaticamente.
-                            </p>
-                        </div>
-
-                        {/* 2. Taxas do Stripe */}
-                        <div className="space-y-2">
-                            <h3 className="font-semibold flex items-center gap-2"><Banknote className="h-5 w-5 text-blue-600" />Taxas do Stripe (Seu custo)</h3>
-                            <p className="text-sm text-muted-foreground">
-                                O Stripe é o nosso parceiro que processa os pagamentos com segurança. Eles cobram taxas próprias, que são descontadas do valor da venda.
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                <span className="font-semibold">IMPORTANTE:</span> Estas são as taxas padrão informadas pelo Stripe para o Brasil. Consulte seu painel Stripe para valores exatos, pois podem variar.
+                                Ao conectar sua conta gratuita do Stripe, você automatiza todo o seu processo financeiro. O TreineAI poderá:
                             </p>
                             <ul className="list-disc list-inside space-y-2 pl-4 text-sm">
-                                <li><span className="font-semibold">PIX:</span> <Badge variant="outline">1.19%</Badge> por transação.</li>
-                                <li><span className="font-semibold">Cartão de Crédito (à vista):</span> <Badge variant="outline">3.99% + R$ 0,39</Badge> por transação.</li>
-                                <li><span className="font-semibold">Boleto Bancário:</span> <Badge variant="outline">R$ 3,45</Badge> por boleto pago.</li>
-                                <li><span className="font-semibold">Cartões Internacionais:</span> Taxa adicional de <Badge variant="outline" className="border-destructive/50 text-destructive">+ 2%</Badge>.</li>
+                                <li>Gerar links de pagamento para <Badge variant="default">PIX</Badge>, <Badge variant="default">Cartão de Crédito</Badge> e <Badge variant="default">Boleto</Badge>.</li>
+                                <li>Enviar links de pagamento para seus alunos via WhatsApp, junto com os lembretes de renovação.</li>
+                                <li>Receber o dinheiro das vendas de produtos e serviços diretamente na sua conta bancária.</li>
+                                <li>Automatizar a baixa de pagamentos e a renovação de matrículas (em breve).</li>
                             </ul>
                         </div>
 
-                        {/* 3. Prazos de Recebimento */}
+                        {/* 2. Prazos de Recebimento (Payout) - ATUALIZADO */}
                         <div className="space-y-2">
                             <h3 className="font-semibold flex items-center gap-2"><Clock className="h-5 w-5 text-green-600" />Prazos de Recebimento (Payout)</h3>
                             <p className="text-sm text-muted-foreground">
-                                O tempo padrão para o dinheiro cair na sua conta bancária (cadastrada no Stripe) depende do método de pagamento:
+                                O tempo para o dinheiro ficar disponível na sua conta Stripe e ser transferido para seu banco.
                             </p>
                             <ul className="list-disc list-inside space-y-2 pl-4 text-sm">
-                                <li><span className="font-semibold">PIX:</span> Disponível para saque em <Badge variant="secondary">2 dias úteis (D+2)</Badge>.</li>
-                                <li><span className="font-semibold">Boleto:</span> Disponível para saque em <Badge variant="secondary">2 dias úteis (D+2)</Badge> após o pagamento.</li>
-                                <li><span className="font-semibold">Cartão de Crédito:</span> Disponível para saque em <Badge variant="secondary">30 dias (D+30)</Badge>.</li>
+                                <li><span className="font-semibold">Primeiro Pagamento:</span> Pode demorar de <Badge variant="secondary">7 a 14 dias úteis</Badge> para verificação de segurança do Stripe.</li>
+                                <li><span className="font-semibold">Pagamentos (Cartão e PIX):</span> Após o primeiro, ficam disponíveis em <Badge variant="secondary">D+2 dias úteis</Badge>. (Ex: Venda na segunda, disponível na quarta).</li>
+                                <li><span className="font-semibold">Boleto Bancário:</span> Disponível em <Badge variant="secondary">D+2 dias úteis</Badge> *após* a confirmação de pagamento do boleto (que leva ~1 dia útil).</li>
                             </ul>
+                            <p className="text-xs text-muted-foreground pt-1">
+                                <strong>Importante:</strong> Contas novas ou com atividades consideradas de maior risco pelo Stripe podem ter retenções temporárias. Os prazos são definidos pelo Stripe no Brasil.
+                            </p>
+                        </div>
+
+                        {/* 3. Taxas */}
+                        <div className="space-y-2">
+                            <h3 className="font-semibold flex items-center gap-2"><Percent className="h-5 w-5 text-primary" />Como funcionam as taxas?</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Existem duas taxas sobre cada transação bem-sucedida. O valor líquido (o que você recebe) é o total da venda menos estas duas taxas:
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2 rounded-lg border border-dashed p-3">
+                                    <h4 className="font-semibold flex items-center gap-2 text-sm"><Banknote className="h-4 w-4 text-blue-600" />Taxa do Stripe (Seu custo)</h4>
+                                    <p className="text-xs text-muted-foreground">Taxas do processador de pagamento (Stripe) para cada transação. (Valores padrão no Brasil, podem variar):</p>
+                                    <ul className="list-disc list-inside space-y-1 pl-4 text-xs">
+                                        <li><span className="font-semibold">PIX:</span> <Badge variant="outline">1.19%</Badge></li>
+                                        <li><span className="font-semibold">Cartão (à vista):</span> <Badge variant="outline">3.99% + R$ 0,39</Badge></li>
+                                        <li><span className="font-semibold">Boleto Pago:</span> <Badge variant="outline">R$ 3,45</Badge></li>
+                                    </ul>
+                                </div>
+                                <div className="space-y-2 rounded-lg border border-dashed p-3">
+                                    <h4 className="font-semibold flex items-center gap-2 text-sm"><ArrowDown className="h-4 w-4 text-primary" />Taxa da Plataforma (Spread)</h4>
+                                    <p className="text-xs text-muted-foreground">Para cobrir custos de automação (WhatsApp) e infraestrutura, o TreineAI retém uma taxa de <Badge variant="default">{PLATFORM_FEE_DISPLAY}</Badge> sobre o valor total da venda.</p>
+                                </div>
+                            </div>
                         </div>
 
                         {/* 4. Exemplos */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-3 rounded-lg border p-4">
-                                <h3 className="font-semibold flex items-center gap-2"><PiggyBank className="h-5 w-5 text-primary/80" />Exemplo: Venda de R$ 100,00 no PIX</h3>
-                                <div className="flex flex-col space-y-2 text-sm">
-                                    <div className="flex justify-between"><span>Valor da Venda:</span> <span className="font-semibold">R$ 100,00</span></div>
-                                    <div className="flex justify-between text-destructive"><span>Taxa Stripe (PIX 1.19%):</span> <span className="font-semibold">- R$ {pixStripeFee.toFixed(2)}</span></div>
-                                    <div className="flex justify-between text-destructive"><span>Taxa TreineAI (Spread 5%):</span> <span className="font-semibold">- R$ {pixPlatformFee.toFixed(2)}</span></div>
+                        <div className="space-y-2">
+                            <h3 className="font-semibold flex items-center gap-2"><PiggyBank className="h-5 w-5 text-primary/80" />Exemplos: Venda de R$ 100,00</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* PIX */}
+                                <div className="space-y-2 rounded-lg border p-3">
+                                    <h4 className="font-semibold text-center text-sm">No PIX</h4>
+                                    <div className="flex justify-between text-xs"><span>Venda Total:</span> <span className="font-semibold">R$ 100,00</span></div>
+                                    <div className="flex justify-between text-xs text-destructive"><span>Taxa Stripe (1.19%):</span> <span className="font-semibold">- R$ {pixStripeFee.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-xs text-destructive"><span>Taxa TreineAI (5%):</span> <span className="font-semibold">- R$ {pixPlatformFee.toFixed(2)}</span></div>
                                     <hr className="my-1 border-dashed" />
                                     <div className="flex justify-between text-green-700">
-                                        <span className="font-semibold">Valor Líquido a Receber:</span>
-                                        <span className="font-bold text-lg">R$ {pixNet.toFixed(2)}</span>
+                                        <span className="font-semibold text-sm">Você Recebe:</span>
+                                        <span className="font-bold text-base">R$ {pixNet.toFixed(2)}</span>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="space-y-3 rounded-lg border p-4">
-                                <h3 className="font-semibold flex items-center gap-2"><PiggyBank className="h-5 w-5 text-primary/80" />Exemplo: Venda de R$ 100,00 no Cartão</h3>
-                                <div className="flex flex-col space-y-2 text-sm">
-                                    <div className="flex justify-between"><span>Valor da Venda:</span> <span className="font-semibold">R$ 100,00</span></div>
-                                    <div className="flex justify-between text-destructive"><span>Taxa Stripe (3.99% + R$0,39):</span> <span className="font-semibold">- R$ {cardStripeFee.toFixed(2)}</span></div>
-                                    <div className="flex justify-between text-destructive"><span>Taxa TreineAI (Spread 5%):</span> <span className="font-semibold">- R$ {cardPlatformFee.toFixed(2)}</span></div>
+                                {/* Cartão */}
+                                <div className="space-y-2 rounded-lg border p-3">
+                                    <h4 className="font-semibold text-center text-sm">No Cartão (à vista)</h4>
+                                    <div className="flex justify-between text-xs"><span>Venda Total:</span> <span className="font-semibold">R$ 100,00</span></div>
+                                    <div className="flex justify-between text-xs text-destructive"><span>Taxa Stripe (3.99% + R$0,39):</span> <span className="font-semibold">- R$ {cardStripeFee.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-xs text-destructive"><span>Taxa TreineAI (5%):</span> <span className="font-semibold">- R$ {cardPlatformFee.toFixed(2)}</span></div>
                                     <hr className="my-1 border-dashed" />
                                     <div className="flex justify-between text-green-700">
-                                        <span className="font-semibold">Valor Líquido a Receber:</span>
-                                        <span className="font-bold text-lg">R$ {cardNet.toFixed(2)}</span>
+                                        <span className="font-semibold text-sm">Você Recebe:</span>
+                                        <span className="font-bold text-base">R$ {cardNet.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                {/* Boleto */}
+                                <div className="space-y-2 rounded-lg border p-3">
+                                    <h4 className="font-semibold text-center text-sm">No Boleto</h4>
+                                    <div className="flex justify-between text-xs"><span>Venda Total:</span> <span className="font-semibold">R$ 100,00</span></div>
+                                    <div className="flex justify-between text-xs text-destructive"><span>Taxa Stripe (Fixa):</span> <span className="font-semibold">- R$ {boletoStripeFee.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-xs text-destructive"><span>Taxa TreineAI (5%):</span> <span className="font-semibold">- R$ {boletoPlatformFee.toFixed(2)}</span></div>
+                                    <hr className="my-1 border-dashed" />
+                                    <div className="flex justify-between text-green-700">
+                                        <span className="font-semibold text-sm">Você Recebe:</span>
+                                        <span className="font-bold text-base">R$ {boletoNet.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
 
                     </div>
                 </ScrollArea>

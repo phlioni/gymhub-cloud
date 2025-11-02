@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { Copy, MessageCircle, Link as LinkIcon, Loader, RefreshCw, AlertCircle } from "lucide-react";
+import { Copy, MessageCircle, Link as LinkIcon, Loader, RefreshCw, AlertCircle, Clock } from "lucide-react"; // <<< 1. IMPORTAR CLOCK
 
 // Tipo para o produto (simplificado)
 interface Product {
@@ -160,9 +160,16 @@ Qualquer dúvida, é só chamar! 💪`
                             <span className="font-semibold">Valor Líquido Estimado*:</span>
                             <span className="font-semibold">R$ {estimatedNet.toFixed(2)}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground pt-2">
-                            *Estimativa baseada na taxa de Cartão de Crédito (3.99% + R$0,39). O valor líquido será maior para PIX (1.19%) ou Boleto (R$3,45).
+
+                        {/* <<< 2. INÍCIO DA ATUALIZAÇÃO >>> */}
+                        <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1.5">
+                            <Clock className="h-3 w-3 shrink-0" />
+                            Repasse em <span className="font-semibold">D+2 dias úteis</span> (Cartão/PIX) após 1º pgto.
                         </p>
+                        <p className="text-xs text-muted-foreground">
+                            *Estimativa baseada na taxa de Cartão de Crédito.
+                        </p>
+                        {/* <<< FIM DA ATUALIZAÇÃO >>> */}
                     </div>
 
                     {/* Seletor de Aluno */}

@@ -16,7 +16,8 @@ import {
   Bot,
   ArrowRight,
   ShoppingBag,
-  Award
+  Award,
+  Zap // <<< 1. IMPORTAR O ÍCONE
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, Cell } from 'recharts';
 import { ExpiringEnrollmentsDialog } from "@/components/dashboard/ExpiringEnrollmentsDialog";
@@ -47,11 +48,15 @@ interface TopProduct {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { loading: authLoading } = useAuthProtection();
+  // <<< 2. OBTER O organizationId DO HOOK >>>
+  const { organizationId, loading: authLoading } = useAuthProtection();
   const [dataLoading, setDataLoading] = useState(true);
   const [showExpiringDialog, setShowExpiringDialog] = useState(false);
   const [showOverdueDialog, setShowOverdueDialog] = useState(false);
   const [showAtRiskDialog, setShowAtRiskDialog] = useState(false);
+
+  // <<< 3. ADICIONAR ESTADO PARA O STRIPE >>>
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<string | null>(null);
 
   const [data, setData] = useState({
     totalRevenueMonth: 0,
@@ -71,12 +76,14 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    if (!authLoading) {
-      loadDashboardData();
+    // <<< 4. VERIFICAR SE organizationId ESTÁ PRONTO >>>
+    if (!authLoading && organizationId) {
+      loadDashboardData(organizationId);
     }
-  }, [authLoading]);
+  }, [authLoading, organizationId]); // <<< 5. ADICIONAR organizationId COMO DEPENDÊNCIA
 
-  const loadDashboardData = async () => {
+  // <<< 6. ACEITAR organizationId COMO PARÂMETRO >>>
+  const loadDashboardData = async (orgId: string) => {
     setDataLoading(true);
     try {
       const today = new Date();
@@ -98,6 +105,8 @@ const Dashboard = () => {
         { data: topProductsData, error: rpcErrorTopProducts },
         { data: allStudentsWithCheckins, error: studentsError },
         { data: checkInSources, error: checkInSourcesError },
+        // <<< 7. ADICIONAR BUSCA DO STATUS DO STRIPE >>>
+        { data: orgStatus, error: orgStatusError },
       ] = await Promise.all([
         supabase.from('students').select('*', { count: 'exact', head: true }),
         supabase.from('sales').select('total_price').gte('sale_date', firstDayOfCurrentMonth.toISOString()),
@@ -111,6 +120,8 @@ const Dashboard = () => {
         supabase.rpc('get_top_products_this_month'),
         supabase.from('students').select('id, check_ins(checked_in_at)'),
         supabase.from('check_ins').select('source').gte('checked_in_at', firstDayOfCurrentMonth.toISOString()),
+        // <<< 7. ADICIONAR BUSCA DO STATUS DO STRIPE >>>
+        supabase.from('organizations').select('stripe_account_status').eq('id', orgId).limit(1).single(),
       ]);
 
       if (rpcErrorEnrollments) throw rpcErrorEnrollments;
@@ -119,6 +130,11 @@ const Dashboard = () => {
       if (rpcErrorTopProducts) throw rpcErrorTopProducts;
       if (studentsError) throw studentsError;
       if (checkInSourcesError) throw checkInSourcesError;
+      // <<< 8. TRATAR ERRO DO STATUS DO STRIPE >>>
+      if (orgStatusError) throw orgStatusError;
+
+      // <<< 9. SETAR O ESTADO DO STRIPE >>>
+      setStripeAccountStatus(orgStatus?.stripe_account_status || null);
 
       const monthlyProductRevenue = salesThisMonthData?.reduce((sum, sale) => sum + sale.total_price, 0) || 0;
       const { current_month_total, previous_month_total, chart_data: enrollmentChartData } = enrollmentRevenueStats as any;
@@ -185,6 +201,28 @@ const Dashboard = () => {
             <h1 className="text-3xl md:text-4xl font-bold mb-2">Dashboard</h1>
             <p className="text-muted-foreground text-sm md:text-base">Visão geral e em tempo real do seu negócio.</p>
           </div>
+
+          {/* --- 10. ADICIONAR O CARD DE CTA DO STRIPE --- */}
+          {!loading && stripeAccountStatus !== 'enabled' && (
+            <Card className="lg:col-span-4 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 shadow-lg hover:shadow-primary/10 transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-bold text-primary">Ative seus Recebimentos Online!</CardTitle>
+                <DollarSign className="h-6 w-6 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4 max-w-3xl">
+                  Receba pagamentos de forma fácil e profissional! Conecte sua conta gratuita do Stripe para aceitar <span className="font-semibold text-foreground">PIX, Cartão de Crédito e Boleto</span>.
+                  Automatize suas cobranças e receba seus repasses em D+2 dias úteis.
+                </p>
+                <Button onClick={() => navigate('/settings', { state: { tab: 'integrations' } })}>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Conectar com Stripe Agora
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          {/* --- FIM DO CARD DE CTA --- */}
+
 
           <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Receita do Mês</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-10 w-3/4" /> : <><div className="text-3xl font-bold">{formatCurrency(data.totalRevenueMonth)}</div><p className={cn("text-xs", data.revenueChange >= 0 ? "text-green-600" : "text-red-600")}> {data.revenueChange >= 0 ? '+' : ''}{data.revenueChange.toFixed(1)}% em relação ao mês anterior</p></>}</CardContent></Card>
