@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { IntegrationHelpDialog } from "@/components/IntegrationHelpDialog";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
+// --- 1. IMPORTAR O NOVO DIÁLOGO ---
+import { StripeHelpDialog } from "@/components/settings/StripeHelpDialog";
 
 const SUPABASE_URL = supabase.supabaseUrl;
 
@@ -49,6 +51,9 @@ const Settings = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isGympassHelpOpen, setGympassHelpOpen] = useState(false);
   const [isTotalPassHelpOpen, setTotalPassHelpOpen] = useState(false);
+
+  // --- 2. ADICIONAR NOVO ESTADO ---
+  const [isStripeHelpOpen, setStripeHelpOpen] = useState(false);
 
   // --- INÍCIO: NOVOS ESTADOS PARA O STRIPE ---
   const [stripeOnboardingLoading, setStripeOnboardingLoading] = useState(false);
@@ -360,9 +365,21 @@ const Settings = () => {
                     {/* --- INÍCIO: BLOCO STRIPE CONNECT --- */}
                     <Separator />
                     <div className="space-y-4 border p-4 rounded-lg">
-                      <h4 className="font-semibold text-lg flex items-center gap-2">
-                        Stripe Connect (Pagamentos)
-                      </h4>
+                      {/* --- 3. MODIFICAR O TÍTULO PARA INCLUIR O BOTÃO --- */}
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-semibold text-lg flex items-center gap-2">
+                          Stripe Connect (Pagamentos)
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setStripeHelpOpen(true)}
+                        >
+                          <HelpCircle className="h-4 w-4 mr-1.5" /> Como funciona?
+                        </Button>
+                      </div>
+
                       {stripeAccountStatus === 'enabled' ? (
                         <div className="flex items-center gap-2 text-green-600">
                           <CheckCircle className="h-5 w-5" />
@@ -487,6 +504,12 @@ const Settings = () => {
         open={isTotalPassHelpOpen}
         onOpenChange={setTotalPassHelpOpen}
         webhookUrl={integrationData.webhookUrl}
+      />
+
+      {/* --- 4. RENDERIZAR O NOVO DIÁLOGO --- */}
+      <StripeHelpDialog
+        open={isStripeHelpOpen}
+        onOpenChange={setStripeHelpOpen}
       />
     </>
   );
