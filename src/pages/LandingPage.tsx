@@ -26,11 +26,11 @@ import {
     Star
 } from "lucide-react";
 
-// --- CAMINHOS DE IMAGENS LOCAIS ATUALIZADOS (CORRIGIDOS) ---
+// --- CAMINHOS DE IMAGENS LOCAIS (Corrigidos) ---
 const heroImg = "/photo-1517836357463-d25dfeac3438.png";
-const gymImg = "/photo-1534438327276-14e5300c3a48.avif"; // Corrigido: Removido /public/
-const studioImg = "/photo-1571902943202-507ec2618e8f.avif"; // Corrigido: Removido /public/
-const personalImg = "/photo-1554284126-aa88f22d8b74.avif"; // Corrigido: Removido /public/
+const gymImg = "/photo-1534438327276-14e5300c3a48.avif";
+const studioImg = "/photo-1571902943202-507ec2618e8f.avif";
+const personalImg = "/photo-1554284126-aa88f22d8b74.avif";
 // --- FIM DA ATUALIZAÇÃO ---
 
 
@@ -59,7 +59,7 @@ export const LandingPage = () => {
             <main className="flex-1">
                 {/* --- SEÇÃO HERÓI CORRIGIDA (COM CSS BACKGROUND E OVERLAY MAIS FORTE) --- */}
                 <section
-                    className="relative w-full h-[80vh] md:h-[90vh] flex items-center justify-center text-center text-white overflow-hidden"
+                    className="relative w-full h-auto md:h-[90vh] flex items-center justify-center text-center text-white overflow-hidden py-24 md:py-32" // Altura automática no mobile
                     style={{
                         backgroundImage: `url(${heroImg})`,
                         backgroundSize: 'cover',
@@ -67,35 +67,39 @@ export const LandingPage = () => {
                         backgroundColor: '#1a1a1a' // Fundo escuro de fallback
                     }}
                 >
-                    {/* Overlay Escuro (AGORA MAIS FORTE: bg-black/80) */}
+                    {/* Overlay Escuro (80% de opacidade) */}
                     <div className="absolute inset-0 bg-black/80 -z-10"></div>
 
                     <div className="container mx-auto px-4 z-10 animate-in fade-in-50 duration-1000">
-                        {/* --- TÍTULO COM SOMBRA MAIS FORTE --- */}
+
+                        {/* --- TÍTULO CORRIGIDO PARA MOBILE (text-4xl) --- */}
                         <h1
-                            className="text-4xl md:text-6xl font-bold tracking-tighter text-white mb-6 [text-shadow:_0_3px_6px_rgba(0,0,0,0.9)]"
+                            className="text-4xl md:text-6xl font-bold tracking-tighter text-white mb-6 [text-shadow:_0_3px_9px_rgb(0_0_0_/_90%)]"
                         >
-                            Menos tempo gerenciando, <br className="md:hidden" />
-                            <span className="text-primary">mais tempo transformando vidas.</span>
+                            Menos tempo gerenciando, <span className="text-primary">mais tempo transformando vidas.</span>
                         </h1>
-                        <p className="max-w-3xl mx-auto text-base md:text-xl text-white/90 mb-4 [text-shadow:_0_2px_4px_rgba(0,0,0,0.8)]">
-                            O TreineAI automatiza a gestão da sua academia, CT ou consultoria com uma plataforma inteligente e uma assistente virtual no WhatsApp que seus alunos vão amar.
+
+                        {/* --- PARÁGRAFO CORRIGIDO PARA MOBILE (text-base) E MAIS OBJETIVO --- */}
+                        <p className="max-w-3xl mx-auto text-base md:text-lg text-white/90 mb-4 [text-shadow:_0_2px_5px_rgb(0_0_0_/_80%)]">
+                            A plataforma completa para academias e personais com assistente virtual no WhatsApp.
                         </p>
-                        {/* --- TEXTO ROXO COM SOMBRA --- */}
-                        <p className="max-w-3xl mx-auto text-lg md:text-xl text-primary font-semibold mb-8 [text-shadow:_0_2px_4px_rgba(0,0,0,0.8)]">
-                            Agora com recebimento online via PIX, Cartão e Boleto e repasse em 2 dias úteis!
+
+                        {/* --- SUBTÍTULOS CORRIGIDOS PARA MOBILE (text-base) E MAIS OBJETIVOS --- */}
+                        <p className="max-w-3xl mx-auto text-base md:text-lg text-primary font-semibold mb-6 [text-shadow:_0_2px_5px_rgb(0_0_0_/_80%)]">
+                            Receba via PIX, Cartão e Boleto com repasse em 2 dias úteis!
                         </p>
-                        <p className="max-w-3xl mx-auto text-lg md:text-xl text-white font-bold mb-8 [text-shadow:_0_2px_4px_rgba(0,0,0,0.8)]">
-                            Experimente 2 meses GRÁTIS! Sem cartão de crédito e cancele quando quiser.
+                        <p className="max-w-3xl mx-auto text-lg md:text-xl text-white font-bold mb-6 [text-shadow:_0_2px_5px_rgb(0_0_0_/_80%)]">
+                            Experimente 2 meses GRÁTIS!
                         </p>
-                        {/* --- FIM DAS CORREÇÕES --- */}
-                        <Button asChild size="lg" className="h-12 px-6 text-base md:text-lg font-semibold shadow-glow">
+
+                        {/* --- BOTÃO CORRIGIDO PARA MOBILE --- */}
+                        <Button asChild size="lg" className="h-12 px-6 text-sm md:text-base font-semibold shadow-glow">
                             <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                                 Quero Meus 2 Meses GRÁTIS Agora!
                             </a>
                         </Button>
-                        <p className="mt-4 text-sm text-neutral-300 [text-shadow:_0_2px_4px_rgba(0,0,0,0.8)]">
-                            Aprovado por negócios fitness que buscam inovação.
+                        <p className="mt-4 text-sm text-neutral-300 [text-shadow:_0_1px_3px_rgb(0_0_0_/_60%)]">
+                            Sem cartão de crédito. Cancele quando quiser.
                         </p>
                     </div>
                 </section>
