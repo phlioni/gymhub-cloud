@@ -43,9 +43,14 @@ export const LandingPage = () => {
                         <p className="max-w-3xl mx-auto text-base md:text-xl text-muted-foreground mb-4">
                             O TreineAI automatiza a gestão da sua academia, CT ou consultoria com uma plataforma inteligente e uma assistente virtual no WhatsApp que seus alunos vão amar.
                         </p>
+                        {/* --- ATUALIZADO --- */}
+                        <p className="max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground font-semibold mb-8">
+                            Agora o <span className="text-primary">TreineAI processa seus pagamentos online</span> via PIX, Cartão e Boleto com repasse direto para sua conta em <span className="text-primary">2 dias úteis!</span>
+                        </p>
                         <p className="max-w-3xl mx-auto text-lg md:text-xl text-primary font-bold mb-8">
                             Experimente 2 meses GRÁTIS! Sem cartão de crédito e cancele quando quiser.
                         </p>
+                        {/* --- FIM DA ATUALIZAÇÃO --- */}
                         <Button asChild size="lg" className="h-12 px-6 text-base md:text-lg font-semibold shadow-glow">
                             <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                                 Quero Meus 2 Meses GRÁTIS Agora!
@@ -131,10 +136,11 @@ export const LandingPage = () => {
                                         <div className="p-6 md:p-8">
                                             <h3 className="text-xl md:text-2xl font-bold mb-4">Painel de Controle Total</h3>
                                             <ul className="space-y-3 text-muted-foreground">
+                                                {/* --- ATUALIZADO --- */}
+                                                <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Receba pagamentos via PIX, Cartão e Boleto direto pela plataforma, com o dinheiro na sua conta em 2 dias úteis.</span></li>
                                                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Visualize faturamento, alunos ativos, matrículas vencendo e produtos mais vendidos.</span></li>
                                                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Gestão de Alunos 360º: Cadastros, matrículas, histórico de pagamentos e check-ins.</span></li>
                                                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Criação de Treinos Simplificada e associada a um ou vários alunos.</span></li>
-                                                <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Controle de Vendas e Estoque integrado à sua gestão.</span></li>
                                             </ul>
                                         </div>
                                     </div>
@@ -147,7 +153,8 @@ export const LandingPage = () => {
                                             <h3 className="text-xl md:text-2xl font-bold mb-4">Sua Academia no WhatsApp do Aluno</h3>
                                             <ul className="space-y-3 text-muted-foreground">
                                                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Check-in Automático via WhatsApp, integrado com Gympass e TotalPass.</span></li>
-                                                <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Lembretes de Renovação automáticos que reduzem a inadimplência.</span></li>
+                                                {/* --- ATUALIZADO --- */}
+                                                <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Lembretes de Renovação automáticos com o link de pagamento exclusivo do TreineAI (PIX, Cartão ou Boleto).</span></li>
                                                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Treinador Virtual que sugere treinos para sua aprovação.</span></li>
                                                 <li className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" /><span>Interação e Engajamento para consulta de treinos, agendamentos e mais.</span></li>
                                             </ul>
@@ -182,10 +189,12 @@ export const LandingPage = () => {
                                 <CardHeader><Users className="h-8 w-8 text-primary mb-2" /><CardTitle>Gestão Centralizada</CardTitle></CardHeader>
                                 <CardContent><p className="text-muted-foreground">Abandone o caos de múltiplos sistemas. Gestão financeira, de alunos, treinos e vendas em uma única plataforma.</p></CardContent>
                             </Card>
-                            <Card className="hover:shadow-glow transition-shadow">
-                                <CardHeader><DollarSign className="h-8 w-8 text-primary mb-2" /><CardTitle>Mais Receita, Menos Esforço</CardTitle></CardHeader>
-                                <CardContent><p className="text-muted-foreground">Reduza a inadimplência com lembretes automáticos e identifique oportunidades de novas vendas com os dados do seu dashboard.</p></CardContent>
+                            {/* --- ATUALIZADO --- */}
+                            <Card className="hover:shadow-glow transition-shadow border-primary/20 bg-primary/5">
+                                <CardHeader><DollarSign className="h-8 w-8 text-primary mb-2" /><CardTitle>Receba Pagamentos Online</CardTitle></CardHeader>
+                                <CardContent><p className="text-muted-foreground">Ative os pagamentos do TreineAI em minutos e aceite <span className="font-semibold text-foreground">PIX, Cartão e Boleto</span>. Receba seus repasses direto na sua conta em <span className="font-semibold text-foreground">2 dias úteis</span>.</p></CardContent>
                             </Card>
+                            {/* --- FIM DA ATUALIZAÇÃO --- */}
                         </div>
                     </div>
                 </section>

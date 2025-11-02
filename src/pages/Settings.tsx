@@ -6,14 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle, Save } from "lucide-react";
+import { Upload, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle, Save, DollarSign } from "lucide-react"; // <<< 1. IMPORTAR DOLLARSIGN
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { IntegrationHelpDialog } from "@/components/IntegrationHelpDialog";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
-// --- 1. IMPORTAR O NOVO DIÁLOGO ---
 import { StripeHelpDialog } from "@/components/settings/StripeHelpDialog";
 
 const SUPABASE_URL = supabase.supabaseUrl;
@@ -51,15 +50,10 @@ const Settings = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isGympassHelpOpen, setGympassHelpOpen] = useState(false);
   const [isTotalPassHelpOpen, setTotalPassHelpOpen] = useState(false);
-
-  // --- 2. ADICIONAR NOVO ESTADO ---
   const [isStripeHelpOpen, setStripeHelpOpen] = useState(false);
-
-  // --- INÍCIO: NOVOS ESTADOS PARA O STRIPE ---
   const [stripeOnboardingLoading, setStripeOnboardingLoading] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [stripeAccountStatus, setStripeAccountStatus] = useState<string | null>(null);
-  // --- FIM: NOVOS ESTADOS PARA O STRIPE ---
 
   useEffect(() => {
     if (organizationId) {
@@ -94,11 +88,8 @@ const Settings = () => {
           totalpassIntegrationCode: orgData.totalpass_integration_code || "",
           webhookUrl: `${SUPABASE_URL}/functions/v1/checkin-integration`,
         });
-
-        // --- INÍCIO: POPULAR ESTADOS DO STRIPE ---
         setStripeAccountId(orgData.stripe_account_id);
         setStripeAccountStatus(orgData.stripe_account_status);
-        // --- FIM: POPULAR ESTADOS DO STRIPE ---
       }
     }
     setDataLoading(false);
@@ -218,7 +209,6 @@ const Settings = () => {
     setReminderDays(newDays);
   };
 
-  // --- INÍCIO: NOVA FUNÇÃO HANDLER DO STRIPE ---
   const handleStripeOnboarding = async () => {
     setStripeOnboardingLoading(true);
     try {
@@ -230,7 +220,6 @@ const Settings = () => {
 
       // @ts-ignore
       if (data.onboardingUrl) {
-        // Redireciona o usuário para a página de onboarding do Stripe
         window.location.href = data.onboardingUrl;
       } else {
         toast.error("Não foi possível iniciar a conexão com o Stripe.");
@@ -241,7 +230,6 @@ const Settings = () => {
       setStripeOnboardingLoading(false);
     }
   };
-  // --- FIM: NOVA FUNÇÃO HANDLER DO STRIPE ---
 
   const isLoading = authLoading || dataLoading;
 
@@ -304,7 +292,7 @@ const Settings = () => {
                         </Select>
                       </div>
                       <div className="space-y-2"><Label htmlFor="address">Endereço</Label><Textarea id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} disabled={savingDetails} rows={3} /></div>
-                      <div className="space-y-2"><Label htmlFor="paymentDetails">Chave PIX ou Link de Pagamento</Label><Input id="paymentDetails" value={formData.paymentDetails} onChange={(e) => setFormData({ ...formData, paymentDetails: e.target.value })} disabled={savingDetails} placeholder="Insira sua chave PIX ou o link para pagamento" /></div>
+                      <div className="space-y-2"><Label htmlFor="paymentDetails">Chave PIX ou Link de Pagamento (Para Lembretes)</Label><Input id="paymentDetails" value={formData.paymentDetails} onChange={(e) => setFormData({ ...formData, paymentDetails: e.target.value })} disabled={savingDetails} placeholder="Insira sua chave PIX ou o link para pagamento" /></div>
                       <div className="space-y-2"><Label htmlFor="ownerName">Nome do Responsável</Label><Input id="ownerName" value={formData.ownerName} onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })} disabled={savingDetails} /></div>
                       <div className="space-y-2"><Label htmlFor="phoneNumber">Telefone</Label><Input id="phoneNumber" type="tel" value={formData.phoneNumber} onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })} disabled={savingDetails} /></div>
                       <div className="space-y-2"><Label htmlFor="businessHours">Horário de Funcionamento</Label><Textarea id="businessHours" value={formData.businessHours} onChange={(e) => setFormData({ ...formData, businessHours: e.target.value })} placeholder="Ex: Seg-Sex: 6h-22h, Sab-Dom: 8h-18h" disabled={savingDetails} rows={3} /></div>
@@ -323,12 +311,59 @@ const Settings = () => {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleIntegrationSubmit} className="space-y-6">
+                    {/* --- INÍCIO: BLOCO STRIPE CONNECT ATUALIZADO --- */}
+                    <div className="space-y-4 border p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 shadow-sm">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                        <h4 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                          <DollarSign className="h-5 w-5" />
+                          Stripe Connect (Recebimentos Online)
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setStripeHelpOpen(true)}
+                        >
+                          <HelpCircle className="h-4 w-4 mr-1.5" /> Como funciona?
+                        </Button>
+                      </div>
+
+                      {stripeAccountStatus === 'enabled' ? (
+                        <div className="flex items-center gap-2 text-green-600">
+                          <CheckCircle className="h-5 w-5" />
+                          <p className="font-medium">Sua conta Stripe está ativa e conectada!</p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            {stripeAccountId ?
+                              `Sua conta Stripe está conectada mas pendente (${stripeAccountStatus}). Finalize o cadastro no Stripe.` :
+                              "Conecte sua conta Stripe para aceitar pagamentos de alunos (Cartão de Crédito, PIX, Boleto) e receber seus repasses rapidamente em D+2 dias úteis."
+                            }
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={handleStripeOnboarding}
+                            disabled={stripeOnboardingLoading}
+                            className="shadow-md"
+                          >
+                            {stripeOnboardingLoading ? "Aguarde..." : (stripeAccountId ? "Continuar Cadastro no Stripe" : "Conectar com Stripe")}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    {/* --- FIM: BLOCO STRIPE CONNECT --- */}
+
+                    <Separator />
+
                     <div className="space-y-2">
                       <Label htmlFor="webhookUrl">Webhook URL (Seu Endpoint de Integração)</Label>
                       <Input id="webhookUrl" value={integrationData.webhookUrl} readOnly className="font-mono bg-muted" title="Copie este URL e cole no portal de integração do Gympass/TotalPass" />
                       <p className="text-xs text-muted-foreground">Este é o endereço do seu sistema que deve ser configurado no portal das plataformas para receber os pedidos de check-in.</p>
                     </div>
+
                     <Separator />
+
                     <div className="space-y-4 border p-4 rounded-lg">
                       <div className="flex justify-between items-center">
                         <h4 className="font-semibold text-lg flex items-center gap-2 text-green-600"><CheckCircle className="h-5 w-5" /> Gympass (Wellhub)</h4>
@@ -361,48 +396,6 @@ const Settings = () => {
                         <p className="text-xs text-muted-foreground">Este é o código alfanumérico da sua unidade no portal TotalPass.</p>
                       </div>
                     </div>
-
-                    {/* --- INÍCIO: BLOCO STRIPE CONNECT --- */}
-                    <Separator />
-                    <div className="space-y-4 border p-4 rounded-lg">
-                      {/* --- 3. MODIFICAR O TÍTULO PARA INCLUIR O BOTÃO --- */}
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-semibold text-lg flex items-center gap-2">
-                          Stripe Connect (Pagamentos)
-                        </h4>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setStripeHelpOpen(true)}
-                        >
-                          <HelpCircle className="h-4 w-4 mr-1.5" /> Como funciona?
-                        </Button>
-                      </div>
-
-                      {stripeAccountStatus === 'enabled' ? (
-                        <div className="flex items-center gap-2 text-green-600">
-                          <CheckCircle className="h-5 w-5" />
-                          <p className="font-medium">Sua conta Stripe está ativa e conectada!</p>
-                        </div>
-                      ) : stripeAccountId ? (
-                        <p className="text-sm text-muted-foreground">
-                          Sua conta Stripe está conectada mas pendente ({stripeAccountStatus}). Finalize o cadastro no Stripe.
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Conecte sua conta Stripe para aceitar pagamentos de alunos (Cartão de Crédito, PIX, Boleto) e receber seus repasses rapidamente.
-                        </p>
-                      )}
-                      <Button
-                        type="button"
-                        onClick={handleStripeOnboarding}
-                        disabled={stripeOnboardingLoading || stripeAccountStatus === 'enabled'}
-                      >
-                        {stripeOnboardingLoading ? "Aguarde..." : (stripeAccountStatus === 'enabled' ? "Conta Conectada" : "Conectar com Stripe")}
-                      </Button>
-                    </div>
-                    {/* --- FIM: BLOCO STRIPE CONNECT --- */}
 
                     <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={savingIntegrations}>{savingIntegrations ? "Salvando..." : "Salvar Integrações"}</Button>
@@ -445,7 +438,7 @@ const Settings = () => {
                       <ul className="list-disc list-inside text-sm space-y-2 text-muted-foreground">
                         <li>O número de telefone do aluno deve estar cadastrado na tela de "Alunos".</li>
                         <li>O número deve estar no formato internacional completo (Ex: <span className="font-mono text-xs bg-muted p-1 rounded">+5513999998888</span>).</li>
-                        <li>A "Chave PIX ou Link de Pagamento" (na aba Detalhes) deve estar preenchida para ser incluída na mensagem.</li>
+                        <li>A "Chave PIX" (na aba Detalhes) ou um <span className="font-semibold text-foreground">Link de Pagamento Stripe</span> deve estar configurado para ser incluído na mensagem.</li>
                       </ul>
                     </div>
                     <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
@@ -505,8 +498,6 @@ const Settings = () => {
         onOpenChange={setTotalPassHelpOpen}
         webhookUrl={integrationData.webhookUrl}
       />
-
-      {/* --- 4. RENDERIZAR O NOVO DIÁLOGO --- */}
       <StripeHelpDialog
         open={isStripeHelpOpen}
         onOpenChange={setStripeHelpOpen}
