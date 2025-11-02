@@ -92,7 +92,7 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
 
           // **A CORREÇÃO ESTÁ AQUI:**
           // Estamos enviando os IDs do Supabase para o backend
-          productId: product.id, // O ID (UUID) do produto no seu banco
+          productId: product.stripe_product_id, // O ID (UUID) do produto no seu banco
           modalityId: product.modality_id || null // O ID da modalidade (se houver)
         }
       });
