@@ -2,17 +2,16 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, ShoppingCart, Link as LinkIcon, Box, Sparkles, Copy } from "lucide-react"; // <-- Ícones atualizados
+import { Edit, Trash2, ShoppingCart, Link as LinkIcon, Box, Sparkles, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SellProductDialog } from "./SellProductDialog";
 import { EditProductDialog } from "./EditProductDialog";
-import { Session } from "@supabase/supabase-js"; // <-- Importar Session
-import { Badge } from "@/components/ui/badge"; // <-- Importar Badge
+import { Session } from "@supabase/supabase-js";
+import { Badge } from "@/components/ui/badge";
 
-// --- INÍCIO: TIPO ATUALIZADO ---
 interface Product {
-  id: string;
+  id: string; // Este é o UUID do Supabase que precisamos enviar
   name: string;
   brand: string | null;
   price: number;
@@ -21,39 +20,60 @@ interface Product {
   recurring_interval: string | null;
   stripe_product_id: string | null;
   stripe_price_id: string | null;
+  modality_id?: string | null; // Adicione esta linha (se você usa modalidades)
 }
-// --- FIM: TIPO ATUALIZADO ---
 
 interface ProductsTableProps {
   products: Product[];
   loading: boolean;
   onRefresh: () => void;
   organizationId: string | null;
-  session: Session | null; // <-- ADICIONADO PARA ENVIAR TOKEN
+  session: Session | null;
 }
 
 export const ProductsTable = ({ products, loading, onRefresh, organizationId, session }: ProductsTableProps) => {
   const [productToSell, setProductToSell] = useState<Product | null>(null);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
-  const [linkLoading, setLinkLoading] = useState<string | null>(null); // <-- Estado de loading para o link
+  const [linkLoading, setLinkLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
-  const handleDelete = async (id: string) => {
-    // (Lógica de delete permanece a mesma)
-    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+  const handleDelete = async (product: Product) => {
+    if (!session) {
+      toast.error("Sessão expirada. Recarregue a página.");
+      return;
+    }
+    if (!confirm(`Tem certeza que deseja excluir "${product.name}"? Esta ação não pode ser desfeita.`)) return;
 
+    setDeleteLoading(product.id);
     try {
-      // TODO: Adicionar lógica para deletar o produto/preço no Stripe também
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
+      if (product.stripe_product_id && product.stripe_price_id) {
+        const { error: stripeError } = await supabase.functions.invoke('archive-stripe-product', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: {
+            stripeProductId: product.stripe_product_id,
+            stripePriceId: product.stripe_price_id
+          }
+        });
+        // @ts-ignore
+        if (stripeError) throw stripeError;
+        // @ts-ignore
+        if (stripeError?.error) throw new Error(stripeError.error);
+      }
+
+      const { error: dbError } = await supabase.from('products').delete().eq('id', product.id);
+      if (dbError) throw dbError;
+
       toast.success("Produto excluído com sucesso");
       onRefresh();
     } catch (error: any) {
-      toast.error("Falha ao excluir produto. Verifique se existem vendas associadas a ele.");
+      toast.error("Falha ao excluir produto.", { description: error.message });
       console.error(error);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
-  // --- INÍCIO: NOVA FUNÇÃO PARA CRIAR LINK DE PAGAMENTO ---
+  // --- INÍCIO DA CORREÇÃO ---
   const handleCreatePaymentLink = async (product: Product) => {
     if (!product.stripe_price_id || !organizationId || !session) {
       toast.error("Este produto não está sincronizado com o Stripe ou a sessão expirou.");
@@ -68,9 +88,15 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
           stripePriceId: product.stripe_price_id,
           organizationId: organizationId,
           recurring: !!product.recurring_interval,
-          studentId: null, // Link genérico, pode ser adaptado para aluno específico
+          studentId: null,
+
+          // **A CORREÇÃO ESTÁ AQUI:**
+          // Estamos enviando os IDs do Supabase para o backend
+          productId: product.id, // O ID (UUID) do produto no seu banco
+          modalityId: product.modality_id || null // O ID da modalidade (se houver)
         }
       });
+      // --- FIM DA CORREÇÃO ---
 
       // @ts-ignore
       if (error) throw error;
@@ -80,7 +106,7 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
       // @ts-ignore
       const paymentLinkUrl = data.paymentLinkUrl;
       navigator.clipboard.writeText(paymentLinkUrl);
-      toast.success("Link de pagamento copiado para a área de transferência!", {
+      toast.success("Link de pagamento copiado!", {
         description: paymentLinkUrl,
         action: {
           label: "Abrir",
@@ -94,7 +120,6 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
       setLinkLoading(null);
     }
   };
-  // --- FIM: NOVA FUNÇÃO ---
 
   if (loading) {
     return (
@@ -116,7 +141,6 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
     );
   }
 
-  // --- INÍCIO: FUNÇÃO DE FORMATAÇÃO DE PREÇO ---
   const formatPrice = (product: Product) => {
     let price = `R$ ${Number(product.price).toFixed(2)}`;
     if (product.recurring_interval === 'month') return `${price} /mês`;
@@ -124,7 +148,6 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
     if (product.recurring_interval === 'week') return `${price} /semana`;
     return price;
   };
-  // --- FIM: FUNÇÃO DE FORMATAÇÃO DE PREÇO ---
 
   return (
     <>
@@ -148,7 +171,6 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
                     <div className="text-xs text-muted-foreground">{product.brand || "N/A"}</div>
                   </TableCell>
 
-                  {/* CÉLULA TIPO DE PRODUTO */}
                   <TableCell>
                     {product.product_type === 'physical' ? (
                       <Badge variant="secondary" className="font-normal"><Box className="h-3 w-3 mr-1" />Físico</Badge>
@@ -157,7 +179,6 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
                     )}
                   </TableCell>
 
-                  {/* CÉLULA PREÇO */}
                   <TableCell>{formatPrice(product)}</TableCell>
 
                   <TableCell>
@@ -166,30 +187,37 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
                     </span>
                   </TableCell>
                   <TableCell className="text-right space-x-1">
-                    {/* Botão Vender (Estoque) - Apenas para físicos */}
                     {product.product_type === 'physical' && (
-                      <Button variant="outline" size="sm" onClick={() => setProductToSell(product)}>
+                      <Button variant="outline" size="sm" onClick={() => setProductToSell(product)} disabled={deleteLoading === product.id}>
                         <ShoppingCart className="h-4 w-4 mr-2" />
                         Vender (Estoque)
                       </Button>
                     )}
 
-                    {/* Botão Criar Link (Stripe) - Para todos */}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleCreatePaymentLink(product)}
-                      disabled={linkLoading === product.id || !product.stripe_price_id}
+                      disabled={linkLoading === product.id || !product.stripe_price_id || deleteLoading === product.id}
                     >
                       <LinkIcon className="h-4 w-4 mr-2" />
                       {linkLoading === product.id ? "Gerando..." : "Criar Link"}
                     </Button>
 
-                    <Button variant="ghost" size="icon" onClick={() => setProductToEdit(product)}>
+                    <Button variant="ghost" size="icon" onClick={() => setProductToEdit(product)} disabled={deleteLoading === product.id}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(product)}
+                      disabled={deleteLoading === product.id}
+                    >
+                      {deleteLoading === product.id ? (
+                        <span className="animate-spin h-4 w-4 rounded-full border-2 border-destructive border-t-transparent"></span>
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      )}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -199,7 +227,7 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
         </Card>
       </div>
 
-      {/* --- INÍCIO: VIEW MOBILE ATUALIZADA --- */}
+      {/* View Mobile (sem alterações na lógica, apenas adicionando 'disabled' nos botões) */}
       <div className="md:hidden space-y-4">
         {products.map((product) => (
           <Card key={product.id} className="w-full">
@@ -217,11 +245,15 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
                   </div>
                 </div>
                 <div className="flex space-x-0">
-                  <Button variant="ghost" size="icon" onClick={() => setProductToEdit(product)}>
+                  <Button variant="ghost" size="icon" onClick={() => setProductToEdit(product)} disabled={deleteLoading === product.id}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(product)} disabled={deleteLoading === product.id}>
+                    {deleteLoading === product.id ? (
+                      <span className="animate-spin h-4 w-4 rounded-full border-2 border-destructive border-t-transparent"></span>
+                    ) : (
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -238,14 +270,14 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
                   variant="outline"
                   size="sm"
                   onClick={() => handleCreatePaymentLink(product)}
-                  disabled={linkLoading === product.id || !product.stripe_price_id}
+                  disabled={linkLoading === product.id || !product.stripe_price_id || deleteLoading === product.id}
                 >
                   <LinkIcon className="h-4 w-4 mr-2" />
                   {linkLoading === product.id ? "Gerando..." : "Criar Link"}
                 </Button>
               </div>
               {product.product_type === 'physical' && (
-                <Button variant="outline" size="sm" onClick={() => setProductToSell(product)} className="w-full mt-2">
+                <Button variant="outline" size="sm" onClick={() => setProductToSell(product)} className="w-full mt-2" disabled={deleteLoading === product.id}>
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Vender (Estoque)
                 </Button>
@@ -254,9 +286,8 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
           </Card>
         ))}
       </div>
-      {/* --- FIM: VIEW MOBILE ATUALIZADA --- */}
 
-
+      {/* Diálogos */}
       {productToSell && (
         <SellProductDialog
           product={productToSell}
@@ -273,7 +304,7 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
           open={!!productToEdit}
           onOpenChange={(open) => !open && setProductToEdit(null)}
           onSuccess={onRefresh}
-          session={session} // <-- Passar sessão
+          session={session}
         />
       )}
     </>
