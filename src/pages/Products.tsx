@@ -8,7 +8,14 @@ import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
-import { Session } from "@supabase/supabase-js"; // <-- 1. IMPORTAR SESSION
+import { Session } from "@supabase/supabase-js";
+
+// --- 1. DEFINIR TIPO SIMPLIFICADO DE ALUNO ---
+interface Student {
+  id: string;
+  name: string;
+  phone_number: string | null;
+}
 
 const Products = () => {
   const { organizationId, loading: authLoading } = useAuthProtection();
@@ -16,7 +23,10 @@ const Products = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [session, setSession] = useState<Session | null>(null); // <-- 2. ADICIONAR ESTADO DA SESSÃO
+  const [session, setSession] = useState<Session | null>(null);
+
+  // --- 2. ADICIONAR ESTADO PARA ALUNOS ---
+  const [students, setStudents] = useState<Student[]>([]);
 
   // 3. BUSCAR A SESSÃO DO USUÁRIO
   useEffect(() => {
@@ -30,6 +40,8 @@ const Products = () => {
   useEffect(() => {
     if (organizationId) {
       loadProducts();
+      // --- 4. CARREGAR ALUNOS QUANDO A ORG ID ESTIVER PRONTA ---
+      loadStudents();
     }
   }, [organizationId]);
 
@@ -47,6 +59,22 @@ const Products = () => {
       toast.error("Falha ao carregar os produtos");
     } finally {
       setProductsLoading(false);
+    }
+  };
+
+  // --- 5. CRIAR FUNÇÃO PARA CARREGAR ALUNOS ---
+  const loadStudents = async () => {
+    if (!organizationId) return; // Proteção extra
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('id, name, phone_number')
+        .eq('organization_id', organizationId) // Filtrar por organização
+        .order('name');
+      if (error) throw error;
+      setStudents(data || []);
+    } catch (error: any) {
+      toast.error("Falha ao carregar alunos para o envio de links.");
     }
   };
 
@@ -96,7 +124,9 @@ const Products = () => {
             loading={isLoading}
             onRefresh={loadProducts}
             organizationId={organizationId}
-            session={session} // <-- 4. PASSAR SESSÃO PARA A TABELA
+            session={session}
+            // --- 6. PASSAR ALUNOS PARA A TABELA ---
+            students={students}
           />
 
           <AddProductDialog
@@ -104,7 +134,7 @@ const Products = () => {
             onOpenChange={setShowAddDialog}
             organizationId={organizationId}
             onSuccess={loadProducts}
-            session={session} // <-- 5. PASSAR SESSÃO PARA O DIÁLOGO
+            session={session}
           />
         </div>
         <FloatingActionButton onClick={() => setShowAddDialog(true)} />

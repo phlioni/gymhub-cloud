@@ -2,16 +2,18 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, ShoppingCart, Link as LinkIcon, Box, Sparkles, Copy } from "lucide-react";
+import { Edit, Trash2, ShoppingCart, Link as LinkIcon, Box, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SellProductDialog } from "./SellProductDialog";
 import { EditProductDialog } from "./EditProductDialog";
 import { Session } from "@supabase/supabase-js";
 import { Badge } from "@/components/ui/badge";
+// --- 1. IMPORTAR O NOVO DIÁLOGO ---
+import { SendPaymentLinkDialog } from "./SendPaymentLinkDialog";
 
 interface Product {
-  id: string; // Este é o UUID do Supabase que precisamos enviar
+  id: string;
   name: string;
   brand: string | null;
   price: number;
@@ -20,7 +22,14 @@ interface Product {
   recurring_interval: string | null;
   stripe_product_id: string | null;
   stripe_price_id: string | null;
-  modality_id?: string | null; // Adicione esta linha (se você usa modalidades)
+  modality_id?: string | null;
+}
+
+// --- 2. TIPO DE ALUNO ADICIONADO ---
+interface Student {
+  id: string;
+  name: string;
+  phone_number: string | null;
 }
 
 interface ProductsTableProps {
@@ -29,12 +38,15 @@ interface ProductsTableProps {
   onRefresh: () => void;
   organizationId: string | null;
   session: Session | null;
+  // --- 3. RECEBER ALUNOS COMO PROP ---
+  students: Student[];
 }
 
-export const ProductsTable = ({ products, loading, onRefresh, organizationId, session }: ProductsTableProps) => {
+export const ProductsTable = ({ products, loading, onRefresh, organizationId, session, students }: ProductsTableProps) => {
   const [productToSell, setProductToSell] = useState<Product | null>(null);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
-  const [linkLoading, setLinkLoading] = useState<string | null>(null);
+  // --- 4. SUBSTITUIR ESTADO DE LINK PELO ESTADO DO NOVO MODAL ---
+  const [productForLink, setProductForLink] = useState<Product | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   const handleDelete = async (product: Product) => {
@@ -73,53 +85,7 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
     }
   };
 
-  // --- INÍCIO DA CORREÇÃO ---
-  const handleCreatePaymentLink = async (product: Product) => {
-    if (!product.stripe_price_id || !organizationId || !session) {
-      toast.error("Este produto não está sincronizado com o Stripe ou a sessão expirou.");
-      return;
-    }
-
-    setLinkLoading(product.id);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-stripe-payment-link', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: {
-          stripePriceId: product.stripe_price_id,
-          organizationId: organizationId,
-          recurring: !!product.recurring_interval,
-          studentId: null,
-
-          // **A CORREÇÃO ESTÁ AQUI:**
-          // Estamos enviando os IDs do Supabase para o backend
-          productId: product.stripe_product_id, // O ID (UUID) do produto no seu banco
-          modalityId: product.modality_id || null // O ID da modalidade (se houver)
-        }
-      });
-      // --- FIM DA CORREÇÃO ---
-
-      // @ts-ignore
-      if (error) throw error;
-      // @ts-ignore
-      if (data.error) throw new Error(data.error);
-
-      // @ts-ignore
-      const paymentLinkUrl = data.paymentLinkUrl;
-      navigator.clipboard.writeText(paymentLinkUrl);
-      toast.success("Link de pagamento copiado!", {
-        description: paymentLinkUrl,
-        action: {
-          label: "Abrir",
-          onClick: () => window.open(paymentLinkUrl, '_blank'),
-        },
-      });
-
-    } catch (error: any) {
-      toast.error("Falha ao criar link de pagamento.", { description: error.message });
-    } finally {
-      setLinkLoading(null);
-    }
-  };
+  // --- 5. A função handleCreatePaymentLink foi removida ---
 
   if (loading) {
     return (
@@ -194,15 +160,17 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
                       </Button>
                     )}
 
+                    {/* --- 6. ATUALIZAR BOTÃO "CRIAR LINK" --- */}
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleCreatePaymentLink(product)}
-                      disabled={linkLoading === product.id || !product.stripe_price_id || deleteLoading === product.id}
+                      onClick={() => setProductForLink(product)} // Apenas abre o modal
+                      disabled={!product.stripe_price_id || deleteLoading === product.id}
                     >
                       <LinkIcon className="h-4 w-4 mr-2" />
-                      {linkLoading === product.id ? "Gerando..." : "Criar Link"}
+                      Criar Link
                     </Button>
+                    {/* --- FIM DA ATUALIZAÇÃO --- */}
 
                     <Button variant="ghost" size="icon" onClick={() => setProductToEdit(product)} disabled={deleteLoading === product.id}>
                       <Edit className="h-4 w-4" />
@@ -266,14 +234,15 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
                     </p>
                   )}
                 </div>
+                {/* --- 7. ATUALIZAR BOTÃO MOBILE "CRIAR LINK" --- */}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCreatePaymentLink(product)}
-                  disabled={linkLoading === product.id || !product.stripe_price_id || deleteLoading === product.id}
+                  onClick={() => setProductForLink(product)} // Apenas abre o modal
+                  disabled={!product.stripe_price_id || deleteLoading === product.id}
                 >
                   <LinkIcon className="h-4 w-4 mr-2" />
-                  {linkLoading === product.id ? "Gerando..." : "Criar Link"}
+                  Criar Link
                 </Button>
               </div>
               {product.product_type === 'physical' && (
@@ -305,6 +274,18 @@ export const ProductsTable = ({ products, loading, onRefresh, organizationId, se
           onOpenChange={(open) => !open && setProductToEdit(null)}
           onSuccess={onRefresh}
           session={session}
+        />
+      )}
+
+      {/* --- 8. RENDERIZAR O NOVO DIÁLOGO --- */}
+      {productForLink && (
+        <SendPaymentLinkDialog
+          product={productForLink}
+          open={!!productForLink}
+          onOpenChange={(open) => !open && setProductForLink(null)}
+          organizationId={organizationId}
+          session={session}
+          students={students}
         />
       )}
     </>
