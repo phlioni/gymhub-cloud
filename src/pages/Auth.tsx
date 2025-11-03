@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+// >>> ADICIONADO "Link" <<<
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,6 +153,14 @@ const Auth = () => {
             >
               {loading ? "Aguarde..." : "Entrar"}
             </Button>
+            {/* >>> INÍCIO DA MODIFICAÇÃO <<< */}
+            <div className="mt-4 text-center text-sm">
+              Não tem uma conta?{" "}
+              <Link to="/register" className="underline text-primary font-medium hover:text-primary/80">
+                Cadastre-se aqui
+              </Link>
+            </div>
+            {/* >>> FIM DA MODIFICAÇÃO <<< */}
           </form>
         </CardContent>
       </Card>
