@@ -23,7 +23,8 @@ import {
     Building,
     Target,
     UserCheck,
-    Star
+    Star,
+    Phone // <<< 1. IMPORTADO O ÍCONE DE TELEFONE >>>
 } from "lucide-react";
 
 // --- CAMINHOS DE IMAGENS LOCAIS (Corrigidos) ---
@@ -94,9 +95,9 @@ export const LandingPage = () => {
 
                         {/* --- BOTÃO CORRIGIDO PARA MOBILE --- */}
                         <Button asChild size="lg" className="h-12 px-6 text-sm md:text-base font-semibold shadow-glow">
-                            <Link to="/register">
+                            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                                 Quero Meus 2 Meses GRÁTIS Agora!
-                            </Link>
+                            </a>
                         </Button>
                         <p className="mt-4 text-sm text-neutral-300 [text-shadow:_0_1px_3px_rgb(0_0_0_/_60%)]">
                             Sem cartão de crédito. Cancele quando quiser.
@@ -376,9 +377,9 @@ export const LandingPage = () => {
                             Após o teste, apenas <span className="text-secondary underline">R$14,99/mês</span>.
                         </p>
                         <Button asChild size="lg" variant="secondary" className="h-12 px-6 text-base md:h-14 md:px-10 md:text-xl">
-                            <Link to="/register">
+                            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                                 Experimente o TreineAI Gratuitamente
-                            </Link>
+                            </a>
                         </Button>
                     </div>
                 </section>
@@ -386,17 +387,22 @@ export const LandingPage = () => {
 
             {/* Rodapé */}
             <footer className="border-t">
+                {/* <<< 2. INÍCIO DA MODIFICAÇÃO DO RODAPÉ >>> */}
                 <div className="container mx-auto flex flex-col md:flex-row items-center justify-between py-6 px-4 md:px-6 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <img src={newLogo} alt="TreineAI Logo" className="h-8 w-8" />
-                        {/* --- CORREÇÃO DO ERRO NewDate --- */}
                         <span>© {new Date().getFullYear()} TreineAI. Todos os direitos reservados.</span>
                     </div>
-                    <div className="flex flex-col md:flex-row gap-2 md:gap-4 mt-4 md:mt-0">
+                    <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 mt-4 md:mt-0">
+                        <a href="https://wa.me/5513997977755" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary">
+                            <Phone className="h-4 w-4" />
+                            Suporte via WhatsApp
+                        </a>
                         <a href="#" className="hover:text-primary">Termos de Serviço</a>
                         <a href="#" className="hover:text-primary">Política de Privacidade</a>
                     </div>
                 </div>
+                {/* <<< 3. FIM DA MODIFICAÇÃO DO RODAPÉ >>> */}
             </footer>
 
         </div>
