@@ -1,14 +1,18 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom"; // <<< 1. IMPORTAR useNavigate
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+// <<< 2. IMPORTAR ÍCONES DE ALERTA >>>
+import { Plus, Search, Zap, AlertCircle } from "lucide-react";
 import { ProductsTable } from "@/components/products/ProductsTable";
 import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { toast } from "sonner";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
 import { Session } from "@supabase/supabase-js";
+// <<< 3. IMPORTAR COMPONENTES DE ALERTA >>>
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // --- 1. DEFINIR TIPO SIMPLIFICADO DE ALUNO ---
 interface Student {
@@ -28,6 +32,11 @@ const Products = () => {
   // --- 2. ADICIONAR ESTADO PARA ALUNOS ---
   const [students, setStudents] = useState<Student[]>([]);
 
+  // <<< 4. NOVOS ESTADOS PARA O STRIPE >>>
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<string | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(true);
+  const navigate = useNavigate(); // <<< 5. INICIALIZAR useNavigate
+
   // 3. BUSCAR A SESSÃO DO USUÁRIO
   useEffect(() => {
     const getSession = async () => {
@@ -42,6 +51,8 @@ const Products = () => {
       loadProducts();
       // --- 4. CARREGAR ALUNOS QUANDO A ORG ID ESTIVER PRONTA ---
       loadStudents();
+      // <<< 6. CARREGAR STATUS DO STRIPE >>>
+      loadStripeStatus(organizationId);
     }
   }, [organizationId]);
 
@@ -78,6 +89,27 @@ const Products = () => {
     }
   };
 
+  // <<< 7. FUNÇÃO PARA CARREGAR STATUS DO STRIPE >>>
+  const loadStripeStatus = async (orgId: string) => {
+    setStripeLoading(true);
+    try {
+      const { data: orgStatus, error: orgStatusError } = await supabase
+        .from('organizations')
+        .select('stripe_account_status')
+        .eq('id', orgId)
+        .limit(1)
+        .single();
+
+      if (orgStatusError) throw orgStatusError;
+      setStripeAccountStatus(orgStatus?.stripe_account_status || null);
+    } catch (error: any) {
+      toast.error("Falha ao verificar status de pagamento.", { description: error.message });
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+
   const filteredProducts = useMemo(() => {
     if (!searchTerm) {
       return products;
@@ -87,7 +119,9 @@ const Products = () => {
     );
   }, [products, searchTerm]);
 
-  const isLoading = authLoading || productsLoading;
+  // <<< 8. ATUALIZAR ESTADO DE LOADING GERAL >>>
+  const isLoading = authLoading || productsLoading || stripeLoading;
+  const isStripeEnabled = stripeAccountStatus === 'enabled';
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
@@ -112,12 +146,37 @@ const Products = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Button onClick={() => setShowAddDialog(true)} size="lg" className="h-11 px-6 shadow-md hover:shadow-lg transition-all hidden md:inline-flex">
+              {/* <<< 9. ATUALIZAR BOTÃO DESKTOP >>> */}
+              <Button
+                onClick={() => setShowAddDialog(true)}
+                size="lg"
+                className="h-11 px-6 shadow-md hover:shadow-lg transition-all hidden md:inline-flex"
+                disabled={!isStripeEnabled || isLoading}
+                title={!isStripeEnabled ? "Conecte sua conta Stripe para adicionar produtos" : "Adicionar Produto"}
+              >
                 <Plus className="h-5 w-5 md:mr-2" />
                 <span className="hidden md:inline font-medium">Adicionar Produto</span>
               </Button>
             </div>
           </div>
+
+          {/* <<< 10. ADICIONAR ALERTA DE STRIPE INATIVO >>> */}
+          {!isLoading && !isStripeEnabled && (
+            <Alert variant="default" className="bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950 dark:border-orange-800">
+              <AlertCircle className="h-4 w-4 !text-orange-600" />
+              <AlertTitle className="font-semibold !text-orange-900 dark:!text-orange-200">Ative os Pagamentos para Criar Produtos</AlertTitle>
+              <AlertDescription className="text-orange-700 dark:text-orange-300">
+                Para adicionar produtos e serviços, você precisa primeiro conectar sua conta de pagamentos Stripe.
+                <Button
+                  variant="link"
+                  className="p-0 h-auto ml-1 text-orange-800 dark:text-orange-200 font-bold"
+                  onClick={() => navigate('/settings', { state: { tab: 'integrations' } })}
+                >
+                  Conectar agora <Zap className="h-4 w-4 ml-1" />
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <ProductsTable
             products={filteredProducts}
@@ -137,7 +196,11 @@ const Products = () => {
             session={session}
           />
         </div>
-        <FloatingActionButton onClick={() => setShowAddDialog(true)} />
+        {/* <<< 11. ATUALIZAR BOTÃO MOBILE (FAB) >>> */}
+        <FloatingActionButton
+          onClick={() => setShowAddDialog(true)}
+          disabled={!isStripeEnabled || isLoading}
+        />
       </main>
     </div>
   );
