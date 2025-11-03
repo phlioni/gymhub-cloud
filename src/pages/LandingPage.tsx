@@ -94,9 +94,9 @@ export const LandingPage = () => {
 
                         {/* --- BOTÃO CORRIGIDO PARA MOBILE --- */}
                         <Button asChild size="lg" className="h-12 px-6 text-sm md:text-base font-semibold shadow-glow">
-                            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                            <Link to="/register">
                                 Quero Meus 2 Meses GRÁTIS Agora!
-                            </a>
+                            </Link>
                         </Button>
                         <p className="mt-4 text-sm text-neutral-300 [text-shadow:_0_1px_3px_rgb(0_0_0_/_60%)]">
                             Sem cartão de crédito. Cancele quando quiser.
@@ -376,9 +376,9 @@ export const LandingPage = () => {
                             Após o teste, apenas <span className="text-secondary underline">R$14,99/mês</span>.
                         </p>
                         <Button asChild size="lg" variant="secondary" className="h-12 px-6 text-base md:h-14 md:px-10 md:text-xl">
-                            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                            <Link to="/register">
                                 Experimente o TreineAI Gratuitamente
-                            </a>
+                            </Link>
                         </Button>
                     </div>
                 </section>
