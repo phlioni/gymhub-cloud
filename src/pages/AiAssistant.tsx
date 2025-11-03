@@ -109,7 +109,7 @@ const AiAssistantPage = () => {
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {!isLoading && suggestions.map((s, index) => (
-                        <Card key={index} className="flex flex-col">
+                        <Card key={index} className="flex flex-col min-w-[320px]">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2"><User /> {s.student_name}</CardTitle>
                                 <CardDescription>Objetivo: <Badge variant="outline">{s.goal_details?.objective_text || 'Não informado'}</Badge></CardDescription>
