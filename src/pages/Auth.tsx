@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-// >>> ADICIONADO "Link" <<<
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import gymhubLogo from "@/assets/gymhub-logo.png";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, ShieldOff } from "lucide-react";
+// <<< 1. IMPORTADO O ÍCONE DE TELEFONE >>>
+import { AlertCircle, ShieldOff, Phone } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -24,9 +24,11 @@ const Auth = () => {
     const status = searchParams.get('status');
     if (status === 'inactive' || status === 'overdue') {
       setErrorTitle("Assinatura Expirada");
-      setAuthError("Sua conta foi suspensa por falta de pagamento. Agradecemos por utilizar o TreineAI e esperamos vê-lo de volta em breve!");
+      // <<< 2. MENSAGEM DE ERRO ATUALIZADA >>>
+      setAuthError("Sua conta foi suspensa por falta de pagamento. Entre em contato com o suporte para reativar sua conta.");
     } else if (status === 'disabled') {
       setErrorTitle("Conta Desativada");
+      // <<< 3. MENSAGEM DE ERRO ATUALIZADA >>>
       setAuthError("Seu acesso foi desativado por um administrador. Por favor, entre em contato com o suporte.");
     }
 
@@ -65,6 +67,7 @@ const Auth = () => {
         if (profile && !profile.is_active) {
           await supabase.auth.signOut();
           setErrorTitle("Conta Desativada");
+          // <<< 4. MENSAGEM DE ERRO ATUALIZADA >>>
           setAuthError("Seu acesso foi desativado por um administrador. Por favor, entre em contato com o suporte.");
           setLoading(false);
           return;
@@ -80,7 +83,8 @@ const Auth = () => {
         if (subStatus === 'inactive' || subStatus === 'overdue') {
           await supabase.auth.signOut();
           setErrorTitle("Assinatura Expirada");
-          setAuthError("Sua conta foi suspensa por falta de pagamento. Agradecemos por utilizar o TreineAI e esperamos vê-lo de volta em breve!");
+          // <<< 5. MENSAGEM DE ERRO ATUALIZADA >>>
+          setAuthError("Sua conta foi suspensa por falta de pagamento. Entre em contato com o suporte para reativar sua conta.");
           setLoading(false);
           return;
         }
@@ -118,6 +122,13 @@ const Auth = () => {
               <AlertTitle>{errorTitle}</AlertTitle>
               <AlertDescription>
                 {authError}
+                {/* <<< 6. BOTÃO DE CONTATO ADICIONADO >>> */}
+                <Button variant="link" asChild className="p-0 h-auto mt-2 text-destructive font-semibold">
+                  <a href="https://wa.me/5513997977755" target="_blank" rel="noopener noreferrer">
+                    <Phone className="h-4 w-4 mr-1.5" />
+                    Falar com Suporte via WhatsApp
+                  </a>
+                </Button>
               </AlertDescription>
             </Alert>
           )}
@@ -153,14 +164,12 @@ const Auth = () => {
             >
               {loading ? "Aguarde..." : "Entrar"}
             </Button>
-            {/* >>> INÍCIO DA MODIFICAÇÃO <<< */}
             <div className="mt-4 text-center text-sm">
               Não tem uma conta?{" "}
               <Link to="/register" className="underline text-primary font-medium hover:text-primary/80">
                 Cadastre-se aqui
               </Link>
             </div>
-            {/* >>> FIM DA MODIFICAÇÃO <<< */}
           </form>
         </CardContent>
       </Card>

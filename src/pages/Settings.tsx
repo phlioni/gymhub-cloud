@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle, Save, DollarSign } from "lucide-react"; // <<< 1. IMPORTAR DOLLARSIGN
+// <<< 1. IMPORTADO "Phone" E "MessageCircle" >>>
+import { Upload, CheckCircle, Smartphone, Clock, Lock, Zap, Key, KeySquare, HelpCircle, Save, DollarSign, Phone, MessageCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -481,6 +482,27 @@ const Settings = () => {
                   </form>
                 </CardContent>
               </Card>
+
+              {/* <<< 2. NOVO CARD DE SUPORTE ADICIONADO >>> */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5 text-primary" />Suporte Técnico</CardTitle>
+                  <CardDescription>Precisa de ajuda ou tem alguma dúvida?</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Entre em contato conosco diretamente pelo WhatsApp para um atendimento mais rápido.
+                  </p>
+                  <Button asChild>
+                    <a href="https://wa.me/5513997977755" target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Falar com Suporte
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+              {/* <<< 3. FIM DO NOVO CARD >>> */}
+
             </TabsContent>
           </Tabs>
         </div>
