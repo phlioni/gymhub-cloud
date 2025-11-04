@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PlusCircle, Trash2, GripVertical, Save, X, ChevronsUpDown, Check } from "lucide-react";
+// <<< 1. IMPORTAR ÍCONE DE LINK >>>
+import { PlusCircle, Trash2, GripVertical, Save, X, ChevronsUpDown, Check, Link } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -22,7 +23,11 @@ const weekDays = [
     { value: 4, label: 'Quinta-feira' }, { value: 5, label: 'Sexta-feira' }, { value: 6, label: 'Sábado' }, { value: 7, label: 'Domingo' },
 ];
 
-type WorkoutExerciseData = Omit<Tables<'workout_exercises'>, 'workout_id' | 'created_at'> & { tempId: string };
+// <<< 2. ATUALIZAR TIPO INTERNO PARA INCLUIR VIDEO_URL >>>
+type WorkoutExerciseData = Omit<Tables<'workout_exercises'>, 'workout_id' | 'created_at'> & {
+    tempId: string;
+    video_url?: string | null; // Adicionado
+};
 
 // Adicionado student_phone_number para o fluxo da IA
 type WorkoutDataForDialog = WorkoutWithDetails & { student_phone_number?: string | null };
@@ -136,7 +141,12 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
                 setSelectedStudents(workoutData.workout_students.map(ws => ws.students).filter(Boolean) as Pick<Tables<'students'>, 'id' | 'name'>[]);
                 setFrequency(workoutData.frequency as "single" | "daily" | "weekly" || "single");
                 setSelectedDayOfWeek(workoutData.day_of_week);
-                setExercises(workoutData.workout_exercises.sort((a, b) => a.order_index - b.order_index).map(ex => ({ ...ex, tempId: ex.id })));
+                // <<< 3. POPULAR DADOS (incluindo video_url) >>>
+                setExercises(workoutData.workout_exercises.sort((a, b) => a.order_index - b.order_index).map(ex => ({
+                    ...ex,
+                    tempId: ex.id,
+                    video_url: ex.video_url || null // Garante que video_url está no estado
+                } as WorkoutExerciseData)));
             } else {
                 resetForm();
             }
@@ -173,11 +183,13 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
             {
                 tempId: `temp-${exercises.length}-${Date.now()}`,
                 exercise_name: "", sets: null, reps: null, rest_period: null, observations: null,
+                video_url: null, // <<< 4. ADICIONAR AO NOVO EXERCÍCIO >>>
                 order_index: exercises.length, id: '',
             },
         ]);
     };
 
+    // <<< 5. ATUALIZAR 'updateExercise' PARA SUPORTAR 'video_url' >>>
     const updateExercise = (tempId: string, field: keyof Omit<WorkoutExerciseData, 'tempId' | 'id' | 'workout_id' | 'created_at'>, value: string | null) => {
         setExercises(exercises.map(ex => ex.tempId === tempId ? { ...ex, [field]: value || null } : ex));
     };
@@ -256,6 +268,7 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
 
             if (exercises.length > 0) {
                 const exercisesToUpsert = exercises.map(ex => {
+                    // <<< 6. ADICIONAR 'video_url' AO PAYLOAD DE UPSERT >>>
                     const payload: any = {
                         workout_id: workoutId,
                         exercise_name: ex.exercise_name,
@@ -263,6 +276,7 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
                         reps: ex.reps || null,
                         rest_period: ex.rest_period || null,
                         observations: ex.observations || null,
+                        video_url: ex.video_url || null, // Salva o link do vídeo
                         order_index: ex.order_index,
                     };
                     if (ex.id && !ex.tempId.startsWith('temp-')) {
@@ -385,6 +399,22 @@ export const AddEditWorkoutDialog = ({ open, onOpenChange, organizationId, worko
                                         <Label htmlFor={`exObs-${exercise.tempId}`}>Observações</Label>
                                         <Input id={`exObs-${exercise.tempId}`} value={exercise.observations || ""} onChange={(e) => updateExercise(exercise.tempId, 'observations', e.target.value)} placeholder="Ex: Cadência 2-0-2" disabled={loading} />
                                     </div>
+                                    {/* --- INÍCIO: NOVO CAMPO DE VÍDEO --- */}
+                                    <div className="space-y-2 pl-6">
+                                        <Label htmlFor={`exVideo-${exercise.tempId}`}>Link do Vídeo (Opcional)</Label>
+                                        <div className="flex items-center gap-2">
+                                            <Link className="h-10 w-10 p-2 text-muted-foreground shrink-0" />
+                                            <Input
+                                                id={`exVideo-${exercise.tempId}`}
+                                                value={exercise.video_url || ""}
+                                                onChange={(e) => updateExercise(exercise.tempId, 'video_url', e.target.value)}
+                                                placeholder="Ex: https://youtube.com/watch?v=..."
+                                                disabled={loading}
+                                                type="url"
+                                            />
+                                        </div>
+                                    </div>
+                                    {/* --- FIM: NOVO CAMPO DE VÍDEO --- */}
                                 </div>
                             ))}
                             <Button type="button" variant="outline" onClick={addExercise} disabled={loading} className="w-full">
