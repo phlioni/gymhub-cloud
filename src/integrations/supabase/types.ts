@@ -9,41 +9,99 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      check_ins: {
+      appointments: {
         Row: {
-          checked_in_at: string
+          created_at: string
+          end_time: string
           id: string
+          modality_id: string | null
+          notes: string | null
           organization_id: string
+          start_time: string
+          status: string | null
           student_id: string
-          source: string | null
         }
         Insert: {
-          checked_in_at?: string
+          created_at?: string
+          end_time: string
           id?: string
+          modality_id?: string | null
+          notes?: string | null
           organization_id: string
+          start_time: string
+          status?: string | null
           student_id: string
-          source?: string | null
         }
         Update: {
-          checked_in_at?: string
+          created_at?: string
+          end_time?: string
           id?: string
+          modality_id?: string | null
+          notes?: string | null
           organization_id?: string
+          start_time?: string
+          status?: string | null
           student_id?: string
-          source?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "check_ins_student_id_fkey"
+            foreignKeyName: "appointments_modality_id_fkey"
+            columns: ["modality_id"]
+            isOneToOne: false
+            referencedRelation: "modalities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      check_ins: {
+        Row: {
+          checked_in_at: string
+          id: string
+          organization_id: string
+          source: string | null
+          student_id: string
+        }
+        Insert: {
+          checked_in_at?: string
+          id?: string
+          organization_id: string
+          source?: string | null
+          student_id: string
+        }
+        Update: {
+          checked_in_at?: string
+          id?: string
+          organization_id?: string
+          source?: string | null
+          student_id?: string
+        }
+        Relationships: [
           {
             foreignKeyName: "check_ins_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_ins_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -94,34 +152,34 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          gympass_modality_id: string | null
           id: string
           name: string
           organization_id: string
           price: number | null
           pricing_type: string | null
-          gympass_modality_id: string | null
           totalpass_modality_id: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
+          gympass_modality_id?: string | null
           id?: string
           name: string
           organization_id: string
           price?: number | null
           pricing_type?: string | null
-          gympass_modality_id?: string | null
           totalpass_modality_id?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
+          gympass_modality_id?: string | null
           id?: string
           name?: string
           organization_id?: string
           price?: number | null
           pricing_type?: string | null
-          gympass_modality_id?: string | null
           totalpass_modality_id?: string | null
         }
         Relationships: [
@@ -139,69 +197,68 @@ export type Database = {
           address: string | null
           business_hours: string | null
           created_at: string
+          gympass_api_key: string | null
+          gympass_integration_code: number | null
           id: string
           logo_url: string | null
           name: string
-          owner_name: string | null
-          phone_number: string | null
           organization_type: string | null
-          gympass_api_key: string | null
-          gympass_integration_code: number | null
-          totalpass_api_key: string | null
-          totalpass_integration_code: string | null
+          owner_name: string | null
           payment_details: string | null
+          phone_number: string | null
           reminder_days: number[] | null
-          // --- INÍCIO DAS NOVAS COLUNAS ---
           stripe_account_id: string | null
           stripe_account_status: string | null
-          // --- FIM DAS NOVAS COLUNAS ---
+          subscription_status: string
+          totalpass_api_key: string | null
+          totalpass_integration_code: string | null
+          trial_expires_at: string | null
         }
         Insert: {
           address?: string | null
           business_hours?: string | null
           created_at?: string
+          gympass_api_key?: string | null
+          gympass_integration_code?: number | null
           id?: string
           logo_url?: string | null
           name: string
-          owner_name?: string | null
-          phone_number?: string | null
           organization_type?: string | null
-          gympass_api_key?: string | null
-          gympass_integration_code?: number | null
-          totalpass_api_key?: string | null
-          totalpass_integration_code?: string | null
+          owner_name?: string | null
           payment_details?: string | null
+          phone_number?: string | null
           reminder_days?: number[] | null
-          // --- INÍCIO DAS NOVAS COLUNAS ---
           stripe_account_id?: string | null
           stripe_account_status?: string | null
-          // --- FIM DAS NOVAS COLUNAS ---
+          subscription_status?: string
+          totalpass_api_key?: string | null
+          totalpass_integration_code?: string | null
+          trial_expires_at?: string | null
         }
         Update: {
           address?: string | null
           business_hours?: string | null
           created_at?: string
+          gympass_api_key?: string | null
+          gympass_integration_code?: number | null
           id?: string
           logo_url?: string | null
           name?: string
-          owner_name?: string | null
-          phone_number?: string | null
           organization_type?: string | null
-          gympass_api_key?: string | null
-          gympass_integration_code?: number | null
-          totalpass_api_key?: string | null
-          totalpass_integration_code?: string | null
+          owner_name?: string | null
           payment_details?: string | null
+          phone_number?: string | null
           reminder_days?: number[] | null
-          // --- INÍCIO DAS NOVAS COLUNAS ---
           stripe_account_id?: string | null
           stripe_account_status?: string | null
-          // --- FIM DAS NOVAS COLUNAS ---
+          subscription_status?: string
+          totalpass_api_key?: string | null
+          totalpass_integration_code?: string | null
+          trial_expires_at?: string | null
         }
         Relationships: []
       }
       products: {
-        // --- INÍCIO DAS MUDANÇAS ---
         Row: {
           brand: string | null
           created_at: string
@@ -209,11 +266,11 @@ export type Database = {
           name: string
           organization_id: string
           price: number
+          product_type: string
           quantity: number
-          product_type: string // 'physical' | 'service'
-          recurring_interval: string | null // null | 'month' | 'year' etc.
-          stripe_product_id: string | null
+          recurring_interval: string | null
           stripe_price_id: string | null
+          stripe_product_id: string | null
         }
         Insert: {
           brand?: string | null
@@ -222,11 +279,11 @@ export type Database = {
           name: string
           organization_id: string
           price: number
-          quantity?: number
           product_type?: string
+          quantity?: number
           recurring_interval?: string | null
-          stripe_product_id?: string | null
           stripe_price_id?: string | null
+          stripe_product_id?: string | null
         }
         Update: {
           brand?: string | null
@@ -235,13 +292,12 @@ export type Database = {
           name?: string
           organization_id?: string
           price?: number
-          quantity?: number
           product_type?: string
+          quantity?: number
           recurring_interval?: string | null
-          stripe_product_id?: string | null
           stripe_price_id?: string | null
+          stripe_product_id?: string | null
         }
-        // --- FIM DAS MUDANÇAS ---
         Relationships: [
           {
             foreignKeyName: "products_organization_id_fkey"
@@ -257,6 +313,8 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_active: boolean | null
+          last_sign_in_at: string | null
           organization_id: string | null
           role: string
         }
@@ -264,6 +322,8 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          is_active?: boolean | null
+          last_sign_in_at?: string | null
           organization_id?: string | null
           role?: string
         }
@@ -271,6 +331,8 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_active?: boolean | null
+          last_sign_in_at?: string | null
           organization_id?: string | null
           role?: string
         }
@@ -381,42 +443,141 @@ export type Database = {
           },
         ]
       }
+      student_coach_interactions: {
+        Row: {
+          conversation_state: string
+          created_at: string
+          goal_details: Json | null
+          id: string
+          last_workout_video_links: Json | null
+          organization_id: string | null
+          plan_suggestion: Json | null
+          student_id: string | null
+          student_phone_number: string
+          updated_at: string
+        }
+        Insert: {
+          conversation_state?: string
+          created_at?: string
+          goal_details?: Json | null
+          id?: string
+          last_workout_video_links?: Json | null
+          organization_id?: string | null
+          plan_suggestion?: Json | null
+          student_id?: string | null
+          student_phone_number: string
+          updated_at?: string
+        }
+        Update: {
+          conversation_state?: string
+          created_at?: string
+          goal_details?: Json | null
+          id?: string
+          last_workout_video_links?: Json | null
+          organization_id?: string | null
+          plan_suggestion?: Json | null
+          student_id?: string | null
+          student_phone_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_coach_interactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_coach_interactions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_history: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          organization_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          organization_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          organization_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_history_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           birth_date: string | null
           cpf: string | null
           created_at: string
+          email: string | null
+          gympass_user_token: string | null
           id: string
           name: string
           organization_id: string
           phone_number: string | null
-          gympass_user_token: string | null
           totalpass_user_token: string | null
-          email: string | null
         }
         Insert: {
           birth_date?: string | null
           cpf?: string | null
           created_at?: string
+          email?: string | null
+          gympass_user_token?: string | null
           id?: string
           name: string
           organization_id: string
           phone_number?: string | null
-          gympass_user_token?: string | null
           totalpass_user_token?: string | null
-          email?: string | null
         }
         Update: {
           birth_date?: string | null
           cpf?: string | null
           created_at?: string
+          email?: string | null
+          gympass_user_token?: string | null
           id?: string
           name?: string
           organization_id?: string
           phone_number?: string | null
-          gympass_user_token?: string | null
           totalpass_user_token?: string | null
-          email?: string | null
         }
         Relationships: [
           {
@@ -428,60 +589,120 @@ export type Database = {
           },
         ]
       }
-      appointments: {
+      workout_exercises: {
         Row: {
           created_at: string
-          end_time: string
+          exercise_name: string
           id: string
-          modality_id: string | null
-          notes: string | null
-          organization_id: string
-          start_time: string
-          status: string | null
-          student_id: string
+          observations: string | null
+          order_index: number
+          reps: string | null
+          rest_period: string | null
+          sets: string | null
+          video_url: string | null
+          workout_id: string
         }
         Insert: {
           created_at?: string
-          end_time: string
+          exercise_name: string
           id?: string
-          modality_id?: string | null
-          notes?: string | null
-          organization_id: string
-          start_time: string
-          status?: string | null
-          student_id: string
+          observations?: string | null
+          order_index?: number
+          reps?: string | null
+          rest_period?: string | null
+          sets?: string | null
+          video_url?: string | null
+          workout_id: string
         }
         Update: {
           created_at?: string
-          end_time?: string
+          exercise_name?: string
           id?: string
-          modality_id?: string | null
-          notes?: string | null
-          organization_id?: string
-          start_time?: string
-          status?: string | null
-          student_id?: string
+          observations?: string | null
+          order_index?: number
+          reps?: string | null
+          rest_period?: string | null
+          sets?: string | null
+          video_url?: string | null
+          workout_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "appointments_modality_id_fkey"
-            columns: ["modality_id"]
+            foreignKeyName: "workout_exercises_workout_id_fkey"
+            columns: ["workout_id"]
             isOneToOne: false
-            referencedRelation: "modalities"
+            referencedRelation: "workouts"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      workout_students: {
+        Row: {
+          student_id: string
+          workout_id: string
+        }
+        Insert: {
+          student_id: string
+          workout_id: string
+        }
+        Update: {
+          student_id?: string
+          workout_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "appointments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_student_id_fkey"
+            foreignKeyName: "workout_students_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_students_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workouts: {
+        Row: {
+          created_at: string
+          day_of_week: number | null
+          description: string | null
+          frequency: string
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          frequency?: string
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          frequency?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workouts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -491,13 +712,47 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      extend_trial: {
+        Args: {
+          org_id: string
+          days_to_extend: number
+        }
+        Returns: undefined
+      }
+      get_all_organization_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          org_id: string
+          org_name: string
+          org_created_at: string
+          owner_id: string
+          owner_name: string
+          owner_email: string
+          owner_last_sign_in_at: string | null
+          owner_is_active: boolean
+          student_count: number
+          total_enrollment_revenue: number
+          total_product_revenue: number
+          subscription_status: string
+          trial_expires_at: string | null
+        }[]
+      }
       get_checkin_count: {
-        Args: { student_id_param: string }
+        Args: {
+          student_id_param: string
+        }
         Returns: number
       }
       get_enrollment_revenue_stats: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      get_modality_popularity: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          name: string
+          count: number
+        }[]
       }
       get_monthly_sales_revenue: {
         Args: Record<PropertyKey, never>
@@ -506,6 +761,12 @@ export type Database = {
           total: number
           month_br: string
         }[]
+      }
+      get_student_workouts: {
+        Args: {
+          p_student_id: string
+        }
+        Returns: Json[]
       }
       get_top_products_this_month: {
         Args: Record<PropertyKey, never>
@@ -623,7 +884,7 @@ export type CompositeTypes<
   }
   ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
   : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+> = PublicCompositeTypeNameOrOptions extends { schema: keyaof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
   ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
