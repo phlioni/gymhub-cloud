@@ -11,6 +11,7 @@ Comigo você pode:
 3️⃣ Fazer seu *check-in*
 4️⃣ Pedir seu *treino do dia*
 🎯 Definir um *novo objetivo* (ex: "quero perder peso")
+📸 Enviar *fotos* da sua refeição ou progresso para seu instrutor ver
 
 É só me dizer o que precisa ou mandar o número da opção!`;
 const actions = {
@@ -221,6 +222,7 @@ async function getAiResponse(userMessage, context, apiKey) {
     const systemPrompt = `Você é "ArIA", uma assistente virtual fitness. Sua personalidade é simpática e motivadora. Use emojis.
     Sua missão é entender a intenção do aluno e usar suas 'tools' para ajudar. Seja direta e use as ferramentas sempre que possível.
     Se o usuário mencionar um objetivo (ex: "perder peso", "ganhar massa"), use 'start_goal_conversation'.
+    Se o usuário apenas enviar uma foto sem contexto, não chame nenhuma ferramenta, apenas responda que a foto foi recebida e salva no histórico.
 
     --- CONTEXTO ATUAL ---
     ${context}
@@ -279,21 +281,26 @@ Deno.serve(async (req) => {
         headers: corsHeaders
     });
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    // <<< 1. ADICIONADO: BUSCAR CREDENCIAIS DO TWILIO >>>
+    // Elas são necessárias para autenticar o fetch da imagem
+    const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+    const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     try {
         const params = new URLSearchParams(await req.text());
         const from = params.get('From')?.replace('whatsapp:', '');
         const body = params.get('Body')?.trim();
         const mediaUrl = params.get('MediaUrl0');
         const numMedia = parseInt(params.get('NumMedia') || '0', 10);
+        const messageSid = params.get('MessageSid'); // Para nomear o arquivo
         const lowerCaseBody = body?.toLowerCase() ?? '';
-        const createTwiMLResponse1 = (message) => `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${message}</Message></Response>`;
+        const createTwiMLResponse11 = (message) => `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${message}</Message></Response>`;
         const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
         if (!from) return new Response('Parâmetros inválidos.', {
             status: 400
         });
         const { data: student, error: studentError } = await supabaseAdmin.from('students').select('id, name, organization_id, organizations(name, subscription_status)').eq('phone_number', from).single();
         if (studentError || !student) {
-            const twiml = createTwiMLResponse1("Olá! 👋 Não encontrei seu cadastro. Por favor, verifique se o número está correto ou fale com a recepção, combinado? 😉");
+            const twiml = createTwiMLResponse11("Olá! 👋 Não encontrei seu cadastro. Por favor, verifique se o número está correto ou fale com a recepção, combinado? 😉");
             return new Response(twiml, {
                 headers: {
                     ...corsHeaders,
@@ -305,7 +312,7 @@ Deno.serve(async (req) => {
         const subStatus = student.organizations?.subscription_status;
         if (subStatus === 'inactive' || subStatus === 'overdue') {
             // @ts-ignore
-            const twiml = createTwiMLResponse1(`Olá! A assinatura da ${student.organizations.name} com o TreineAI foi desativada. Por favor, entre em contato com eles para mais informações.`);
+            const twiml = createTwiMLResponse11(`Olá! A assinatura da ${student.organizations.name} com o TreineAI foi desativada. Por favor, entre em contato com eles para mais informações.`);
             return new Response(twiml, {
                 headers: {
                     ...corsHeaders,
@@ -316,7 +323,7 @@ Deno.serve(async (req) => {
         const { data: adminProfile, error: adminProfileError } = await supabaseAdmin.from('profiles').select('is_active').eq('organization_id', student.organization_id).eq('role', 'admin').single();
         if (adminProfileError || !adminProfile || !adminProfile.is_active) {
             // @ts-ignore
-            const twiml = createTwiMLResponse1(`Olá! O serviço para a ${student.organizations.name} está temporariamente indisponível. Por favor, entre em contato diretamente com a academia.`);
+            const twiml = createTwiMLResponse11(`Olá! O serviço para a ${student.organizations.name} está temporariamente indisponível. Por favor, entre em contato diretamente com a academia.`);
             return new Response(twiml, {
                 headers: {
                     ...corsHeaders,
@@ -343,8 +350,59 @@ Deno.serve(async (req) => {
         const numberOnlyMatch = lowerCaseBody.match(/^(\d+)$/);
         // Combina as duas regex
         const finalVideoMatch = videoCommandMatch || numberOnlyMatch;
+        // --- INÍO: CORREÇÃO PARA CAPTURA DE IMAGEM ---
         if (numMedia > 0 && mediaUrl) {
-            responseMessage = "Recebi sua foto! Se você quiser que eu a publique no Instagram, por favor, envie a foto novamente com a palavra *'postar'* na legenda. 😉";
+            clearVideoCache = true; // Limpa cache de vídeo se enviar foto
+            try {
+                // <<< 2. VERIFICAR CREDENCIAIS >>>
+                if (!twilioAccountSid || !twilioAuthToken) {
+                    console.error("Credenciais do Twilio (SID e Token) não estão configuradas.");
+                    throw new Error("Erro de configuração do servidor: credenciais de mídia ausentes.");
+                }
+                // <<< 3. CRIAR HEADER DE AUTENTICAÇÃO >>>
+                const authHeader = 'Basic ' + btoa(`${twilioAccountSid}:${twilioAuthToken}`);
+                // 1. Baixar a imagem do Twilio
+                // <<< 4. ADICIONAR HEADER AO FETCH >>>
+                const imageResponse = await fetch(mediaUrl, {
+                    headers: {
+                        'Authorization': authHeader
+                    }
+                });
+                if (!imageResponse.ok) {
+                    console.error(`Falha ao buscar imagem do Twilio. Status: ${imageResponse.status}`);
+                    throw new Error(`Não foi possível buscar a imagem do Twilio. Status: ${imageResponse.status} ${imageResponse.statusText}`);
+                }
+                const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+                // Evita contentType nulo ou inesperado
+                const safeContentType = contentType.startsWith('image/') ? contentType : 'image/jpeg';
+                const fileExt = safeContentType.split('/')[1] || 'jpg';
+                const imageBuffer = await imageResponse.arrayBuffer();
+                // 2. Definir o caminho no Storage
+                const filePath = `${student.organization_id}/${student.id}/${messageSid || Date.now()}.${fileExt}`;
+                // 3. Fazer upload para o Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabaseAdmin.storage.from('student_uploads').upload(filePath, imageBuffer, {
+                    contentType: safeContentType
+                }); // Usar safeContentType
+                if (uploadError) throw uploadError;
+                // 4. Salvar no histórico do aluno
+                const legend = body || 'Foto de progresso';
+                await supabaseAdmin.from('student_history').insert({
+                    student_id: student.id,
+                    organization_id: student.organization_id,
+                    event_type: 'photo_progress',
+                    notes: `Foto recebida via WhatsApp. Legenda: "${legend}"`,
+                    metadata: {
+                        url: uploadData.path,
+                        source: 'whatsapp',
+                        twilioUrl: mediaUrl
+                    }
+                });
+                responseMessage = "Recebi sua foto! 📸 Salvei no seu histórico para o seu instrutor avaliar. Quer mais alguma coisa?";
+            } catch (imgError) {
+                console.error("Erro ao processar imagem do WhatsApp:", imgError);
+                responseMessage = "Ops! Recebi sua imagem, mas tive um problema ao salvá-la. 😕 Por favor, tente novamente mais tarde.";
+            }
+            // --- FIM: CORREÇÃO PARA CAPTURA DE IMAGEM ---
         } else if (finalVideoMatch) {
             // --- LÓGICA DE PEDIR VÍDEO (ALTA PRIORIDADE) ---
             clearVideoCache = false; // NÃO LIMPAR O CACHE, o usuário pode pedir outro vídeo!
@@ -468,7 +526,7 @@ Deno.serve(async (req) => {
                     const workoutResult = await actions.get_today_workout(supabaseAdmin, student);
                     responseMessage = workoutResult.message;
                     // Salva os links de vídeo no cache do bot
-                    await supabaseAdmin.from('student_coach_interactions')// @ts-ignore
+                    await supabaseAdmin.from('student_coach_interactions') // @ts-ignore
                         .update({
                             last_workout_video_links: workoutResult.videoLinks
                         }).eq('student_phone_number', from);
@@ -488,7 +546,7 @@ Deno.serve(async (req) => {
                 last_workout_video_links: null
             }).eq('student_phone_number', from);
         }
-        const twiml = createTwiMLResponse1(responseMessage);
+        const twiml = createTwiMLResponse11(responseMessage);
         return new Response(twiml, {
             headers: {
                 ...corsHeaders,
@@ -497,7 +555,7 @@ Deno.serve(async (req) => {
         });
     } catch (error) {
         console.error("Erro geral no webhook:", error.message);
-        const twiml = createTwiMLResponse("Puxa, tivemos um probleminha técnico por aqui. 🛠️ Nossa equipe já foi avisada. Tente novamente em alguns instantes, por favor!");
+        const twiml = createTwiMLResponse1("Puxa, tivemos um probleminha técnico por aqui. 🛠️ Nossa equipe já foi avisada. Tente novamente em alguns instantes, por favor!");
         return new Response(twiml, {
             headers: {
                 ...corsHeaders,

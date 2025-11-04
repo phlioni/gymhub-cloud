@@ -86,11 +86,13 @@ const Students = () => {
   }
 
   // Se um aluno estiver selecionado, renderiza a página de detalhes
-  if (selectedStudentId) {
+  if (selectedStudentId && organizationId) {
     return (
       <StudentDetailPage
         studentId={selectedStudentId}
+        organizationId={organizationId} // Passa o organizationId
         onBack={() => setSelectedStudentId(null)}
+        onRefreshStudents={loadStudents} // Passa a função de refresh
       />
     );
   }

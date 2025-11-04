@@ -23,6 +23,13 @@ CREATE POLICY "Service roles can insert history"
   ON public.student_history FOR INSERT
   WITH CHECK (auth.role() = 'service_role');
 
+-- >>> INÍCIO: NOVA POLÍTICA DE DELETE (HISTÓRICO) <<<
+DROP POLICY IF EXISTS "Admins can delete their organization's history" ON public.student_history;
+CREATE POLICY "Admins can delete their organization's history"
+  ON public.student_history FOR DELETE
+  USING (organization_id = public.get_user_organization_id() OR public.is_superadmin());
+-- >>> FIM: NOVA POLÍTICA <<<
+
 
 -- Storage Bucket for student uploads (food pics, progress pics)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -35,9 +42,32 @@ CREATE POLICY "Allow service_role full access to student uploads"
     ON storage.objects FOR ALL
     USING (bucket_id = 'student_uploads' AND auth.role() = 'service_role');
 
+-- Política de SELECT (Leitura)
 DROP POLICY IF EXISTS "Allow admins to view their org's images" ON storage.objects;
 CREATE POLICY "Allow admins to view their org's images"
     ON storage.objects FOR SELECT
-    USING (bucket_id = 'student_uploads' AND public.get_user_organization_id() = (
-        SELECT organization_id FROM public.students WHERE id = (storage.foldername(name))[1]::uuid
-    ));
+    USING (
+        bucket_id = 'student_uploads' 
+        AND (
+            public.is_superadmin()
+            OR EXISTS (
+                SELECT 1
+                FROM public.student_history sh
+                WHERE sh.metadata->>'url' = storage.objects.name
+                AND sh.organization_id = public.get_user_organization_id()
+            )
+        )
+    );
+
+-- >>> INÍCIO: NOVA POLÍTICA DE DELETE (STORAGE) <<<
+DROP POLICY IF EXISTS "Allow admins to delete their org's images" ON storage.objects;
+CREATE POLICY "Allow admins to delete their org's images"
+    ON storage.objects FOR DELETE
+    USING (
+        bucket_id = 'student_uploads'
+        AND (
+            public.is_superadmin()
+            OR public.get_user_organization_id() = (storage.foldername(name))[1]::uuid
+        )
+    );
+-- >>> FIM: NOVA POLÍTICA <<<

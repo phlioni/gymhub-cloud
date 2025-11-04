@@ -26,6 +26,8 @@ interface PlanSuggestion {
 // <<< 3. NOVO COMPONENTE INTERNO DE GALERIA >>>
 const SuggestionImageGallery = ({ images }: { images: Tables<'student_history'>[] }) => {
     const getPublicUrl = (path: string) => {
+        // A url da imagem é o 'path' salvo no metadata
+        if (!path) return "";
         const { data } = supabase.storage.from('student_uploads').getPublicUrl(path);
         return data.publicUrl;
     };
@@ -77,9 +79,10 @@ const AiAssistantPage = () => {
 
             // 2. Para cada interação, busca as fotos de progresso
             const formattedData = await Promise.all(
-                interactions.map(async (item) => {
+                (interactions || []).map(async (item) => {
                     if (!item.students) return null; // Pula se o aluno foi deletado
 
+                    // Busca imagens de progresso ANTERIORES à data de atualização da interação
                     const { data: images, error: imagesError } = await supabase
                         .from('student_history')
                         .select('*')
