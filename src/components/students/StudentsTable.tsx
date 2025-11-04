@@ -4,7 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Edit, Trash2, CalendarClock, Bell, BellOff, Zap, CheckCircle, History, MoreHorizontal } from "lucide-react";
+// <<< 1. REMOVIDO 'History' >>>
+import { Edit, Trash2, CalendarClock, Bell, BellOff, Zap, CheckCircle, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EditStudentDialog } from "./EditStudentDialog";
 import { RenewEnrollmentDialog } from "./RenewEnrollmentDialog";
-import { StudentHistoryDialog } from "./StudentHistoryDialog";
+// <<< 2. REMOVIDO 'StudentHistoryDialog' >>>
 import { getEnrollmentStatus } from "@/utils/enrollmentStatus";
 
 interface Student {
@@ -40,25 +41,24 @@ interface StudentsTableProps {
   students: Student[];
   loading: boolean;
   onRefresh: () => void;
+  // <<< 3. ADICIONADA NOVA PROP >>>
+  onStudentClick: (studentId: string) => void;
 }
 
-export const StudentsTable = ({ students, loading, onRefresh }: StudentsTableProps) => {
+export const StudentsTable = ({ students, loading, onRefresh, onStudentClick }: StudentsTableProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showRenewDialog, setShowRenewDialog] = useState(false);
   const [enrollmentToRenew, setEnrollmentToRenew] = useState<{ student: Student; enrollment: Student['enrollments'][0] } | null>(null);
-  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
-  const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
+
+  // <<< 4. REMOVIDOS ESTADOS DO MODAL DE HISTÓRICO >>>
 
   const handleEditClick = (student: Student) => {
     setSelectedStudent(student);
     setShowEditDialog(true);
   };
 
-  const handleHistoryClick = (studentId: string) => {
-    setHistoryStudentId(studentId);
-    setShowHistoryDialog(true);
-  };
+  // <<< 5. REMOVIDA FUNÇÃO 'handleHistoryClick' >>>
 
   const handleRenewClick = (student: Student) => {
     if (student.enrollments.length === 0) {
@@ -131,7 +131,13 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                   return (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">
-                        <div>{student.name}</div>
+                        {/* <<< 6. NOME CLICÁVEL >>> */}
+                        <span
+                          className="cursor-pointer hover:underline text-primary font-semibold"
+                          onClick={() => onStudentClick(student.id)}
+                        >
+                          {student.name}
+                        </span>
                         <div className="text-xs text-muted-foreground">{student.phone_number || "Sem telefone"}</div>
                       </TableCell>
                       <TableCell>
@@ -167,9 +173,7 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleHistoryClick(student.id)}>
-                            <History className="h-4 w-4 mr-2" /> Histórico
-                          </Button>
+                          {/* <<< 7. BOTÃO DE HISTÓRICO REMOVIDO >>> */}
                           <Button variant="outline" size="sm" onClick={() => handleRenewClick(student)}>
                             <CalendarClock className="h-4 w-4 mr-2" /> Renovar
                           </Button>
@@ -218,7 +222,13 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
               <div className="p-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold">{student.name}</h3>
+                    {/* <<< 8. NOME CLICÁVEL (MOBILE) >>> */}
+                    <h3
+                      className="font-semibold cursor-pointer hover:underline text-primary"
+                      onClick={() => onStudentClick(student.id)}
+                    >
+                      {student.name}
+                    </h3>
                     <p className="text-sm text-muted-foreground">{student.phone_number || "Sem telefone"}</p>
                   </div>
                   <div className="flex">
@@ -229,10 +239,7 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => handleHistoryClick(student.id)}>
-                          <History className="mr-2 h-4 w-4" />
-                          <span>Histórico</span>
-                        </DropdownMenuItem>
+                        {/* <<< 9. REMOVIDO "Histórico" DO MENU (MOBILE) >>> */}
                         <DropdownMenuItem onSelect={() => handleEditClick(student)}>
                           <Edit className="mr-2 h-4 w-4" />
                           <span>Editar</span>
@@ -274,7 +281,7 @@ export const StudentsTable = ({ students, loading, onRefresh }: StudentsTablePro
 
       <EditStudentDialog student={selectedStudent} open={showEditDialog} onOpenChange={setShowEditDialog} onSuccess={onRefresh} />
       <RenewEnrollmentDialog student={enrollmentToRenew?.student || null} enrollment={enrollmentToRenew?.enrollment || null} open={showRenewDialog} onOpenChange={setShowRenewDialog} onSuccess={onRefresh} />
-      <StudentHistoryDialog studentId={historyStudentId} open={showHistoryDialog} onOpenChange={setShowHistoryDialog} />
+      {/* <<< 10. MODAL DE HISTÓRICO COMPLETAMENTE REMOVIDO >>> */}
     </>
   );
 };

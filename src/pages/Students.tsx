@@ -11,6 +11,9 @@ import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { WhatsappInfoDialog } from "@/components/students/WhatsappInfoDialog";
 import { ImportStudentsDialog } from "@/components/students/ImportStudentsDialog";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
+// <<< 1. IMPORTAR O NOVO COMPONENTE DE DETALHE >>>
+import { StudentDetailPage } from "@/components/students/StudentDetailPage";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Students = () => {
   const { organizationId, loading: authLoading } = useAuthProtection();
@@ -21,6 +24,9 @@ const Students = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showWhatsappInfo, setShowWhatsappInfo] = useState(false);
+
+  // <<< 2. NOVO ESTADO PARA CONTROLAR A VISÃO >>>
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     const nameParam = searchParams.get('name');
@@ -67,6 +73,29 @@ const Students = () => {
 
   const isLoading = authLoading || studentsLoading;
 
+  // <<< 3. LÓGICA DE RENDERIZAÇÃO CONDICIONAL >>>
+  if (isLoading) {
+    return (
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </main>
+    )
+  }
+
+  // Se um aluno estiver selecionado, renderiza a página de detalhes
+  if (selectedStudentId) {
+    return (
+      <StudentDetailPage
+        studentId={selectedStudentId}
+        onBack={() => setSelectedStudentId(null)}
+      />
+    );
+  }
+
+  // Se nenhum aluno estiver selecionado, renderiza a tabela
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-primary/[0.02] via-background to-accent/[0.02]">
       <main className="flex-1 p-4 md:p-8">
@@ -111,6 +140,8 @@ const Students = () => {
             students={filteredStudents}
             loading={isLoading}
             onRefresh={loadStudents}
+            // <<< 4. PASSAR A FUNÇÃO DE NAVEGAÇÃO >>>
+            onStudentClick={setSelectedStudentId}
           />
 
           <AddStudentDialog

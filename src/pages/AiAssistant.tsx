@@ -5,10 +5,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ThumbsDown, Edit, Bot, User, CheckCircle } from "lucide-react";
+// <<< 1. IMPORTAR 'Camera' >>>
+import { ThumbsDown, Edit, Bot, User, CheckCircle, Camera } from "lucide-react";
 import { AddEditWorkoutDialog } from "@/components/workouts/AddEditWorkoutDialog";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
+import { Tables } from "@/integrations/supabase/types";
 
+// <<< 2. ATUALIZAR INTERFACE PARA INCLUIR IMAGENS >>>
 interface PlanSuggestion {
     student_phone_number: string;
     student_name: string;
@@ -16,7 +19,39 @@ interface PlanSuggestion {
     organization_id: string;
     goal_details: any;
     plan_suggestion: any;
+    progress_images: Tables<'student_history'>[]; // Novo campo
+    interaction_updated_at: string; // Para filtrar imagens
 }
+
+// <<< 3. NOVO COMPONENTE INTERNO DE GALERIA >>>
+const SuggestionImageGallery = ({ images }: { images: Tables<'student_history'>[] }) => {
+    const getPublicUrl = (path: string) => {
+        const { data } = supabase.storage.from('student_uploads').getPublicUrl(path);
+        return data.publicUrl;
+    };
+
+    if (images.length === 0) {
+        return null; // Não renderiza nada se não houver imagens
+    }
+
+    return (
+        <div className="pt-4">
+            <h4 className="font-semibold text-sm mb-2 flex items-center gap-1.5"><Camera className="h-4 w-4" /> Fotos de Progresso Enviadas:</h4>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+                {images.map(img => (
+                    <a key={img.id} href={getPublicUrl(img.metadata?.url)} target="_blank" rel="noopener noreferrer" className="group shrink-0">
+                        <img
+                            src={getPublicUrl(img.metadata?.url)}
+                            alt={img.notes || 'Foto de progresso'}
+                            className="h-24 w-24 object-cover rounded-md border-2 border-transparent transition-all group-hover:border-primary"
+                        />
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 const AiAssistantPage = () => {
     const { organizationId, loading: authLoading } = useAuthProtection();
@@ -28,26 +63,46 @@ const AiAssistantPage = () => {
     const loadSuggestions = useCallback(async (orgId: string) => {
         setSuggestionsLoading(true);
         try {
-            const { data: studentsWithPendingPlans, error: studentsError } = await supabase
-                .from('students')
+            // 1. Busca interações que estão aguardando validação
+            const { data: interactions, error: interactionsError } = await supabase
+                .from('student_coach_interactions')
                 .select(`
-                    id, name, phone_number,
-                    student_coach_interactions!inner(goal_details, plan_suggestion)
+                    *,
+                    students ( id, name, phone_number )
                 `)
                 .eq('organization_id', orgId)
-                .eq('student_coach_interactions.conversation_state', 'awaiting_plan_validation');
+                .eq('conversation_state', 'awaiting_plan_validation');
 
-            if (studentsError) throw studentsError;
+            if (interactionsError) throw interactionsError;
 
-            const formattedData = studentsWithPendingPlans.map(item => ({
-                student_phone_number: item.phone_number,
-                student_name: item.name,
-                student_id: item.id,
-                organization_id: orgId,
-                goal_details: item.student_coach_interactions[0]?.goal_details,
-                plan_suggestion: item.student_coach_interactions[0]?.plan_suggestion,
-            }));
-            setSuggestions(formattedData as any);
+            // 2. Para cada interação, busca as fotos de progresso
+            const formattedData = await Promise.all(
+                interactions.map(async (item) => {
+                    if (!item.students) return null; // Pula se o aluno foi deletado
+
+                    const { data: images, error: imagesError } = await supabase
+                        .from('student_history')
+                        .select('*')
+                        .eq('student_id', item.students.id)
+                        .eq('event_type', 'photo_progress') // Apenas fotos de progresso
+                        .lt('created_at', item.updated_at); // Fotos enviadas ANTES da sugestão ser gerada
+
+                    if (imagesError) console.error("Erro ao buscar imagens:", imagesError);
+
+                    return {
+                        student_phone_number: item.students.phone_number,
+                        student_name: item.students.name,
+                        student_id: item.students.id,
+                        organization_id: orgId,
+                        goal_details: item.goal_details,
+                        plan_suggestion: item.plan_suggestion,
+                        progress_images: images || [], // Adiciona as imagens
+                        interaction_updated_at: item.updated_at
+                    };
+                })
+            );
+
+            setSuggestions(formattedData.filter(Boolean) as PlanSuggestion[]);
 
         } catch (err: any) {
             toast.error("Falha ao carregar sugestões da IA: " + err.message);
@@ -125,6 +180,10 @@ const AiAssistantPage = () => {
                                     <h4 className="font-semibold text-sm">Sugestão:</h4>
                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{s.plan_suggestion?.generated_plan || 'Nenhuma sugestão gerada.'}</p>
                                 </div>
+
+                                {/* <<< 4. RENDERIZAR A GALERIA DE IMAGENS >>> */}
+                                <SuggestionImageGallery images={s.progress_images} />
+
                             </CardContent>
                             <CardFooter className="flex justify-end gap-2">
                                 <Button variant="outline" size="sm" onClick={() => handleReject(s.student_phone_number)}><ThumbsDown className="mr-2 h-4 w-4" /> Rejeitar</Button>
