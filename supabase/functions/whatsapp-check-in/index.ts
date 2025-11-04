@@ -56,16 +56,8 @@ const actions = {
         return message;
     },
     get_today_workout: async (supabase, student) => {
-        const { data: workouts, error } = await supabase.rpc('get_student_workouts', {
-            p_student_id: student.id,
-            p_organization_id: student.organization_id
-        });
-        if (error) throw error;
-        if (!workouts || workouts.length === 0) {
-            return 'Você ainda não tem um treino associado. Fale com seu instrutor ou defina um objetivo comigo para começarmos! 🚀';
-        }
         const today = new Date();
-        const userTimezone = "America/Sao_Paulo"; // Timezone do Brasil
+        const userTimezone = "America/Sao_Paulo";
         const todayInTimezone = new Date(today.toLocaleString("en-US", {
             timeZone: userTimezone
         }));
@@ -73,26 +65,47 @@ const actions = {
         if (dayOfWeek === 0) {
             dayOfWeek = 7;
         }
+        const { data: workouts, error } = await supabase.from('workouts').select(`
+                *,
+                workout_students!inner(student_id),
+                workout_exercises (
+                    *,
+                    video_url 
+                )
+            `).eq('organization_id', student.organization_id).eq('workout_students.student_id', student.id).order('order_index', {
+            referencedTable: 'workout_exercises',
+            ascending: true
+        });
+        if (error) throw error;
+        if (!workouts || workouts.length === 0) {
+            return {
+                message: 'Você ainda não tem um treino associado. Fale com seu instrutor ou defina um objetivo comigo para começarmos! 🚀',
+                videoLinks: []
+            };
+        }
         const todaysWorkouts = workouts.filter((workout) => {
-            if (workout.frequency === 'weekly' || workout.frequency === 'single') {
-                return true;
-            }
-            if (workout.frequency === 'daily' && workout.day_of_week === dayOfWeek) {
-                return true;
-            }
+            if (workout.frequency === 'weekly' || workout.frequency === 'single') return true;
+            if (workout.frequency === 'daily' && workout.day_of_week === dayOfWeek) return true;
             return false;
         });
         if (todaysWorkouts.length === 0) {
-            return 'Ótimo que você está aqui! 🎉 Nenhum treino específico para hoje. Que tal um treino livre ou uma conversa com seu instrutor?';
+            return {
+                message: 'Ótimo que você está aqui! 🎉 Nenhum treino específico para hoje. Que tal um treino livre ou uma conversa com seu instrutor?',
+                videoLinks: []
+            };
         }
         let workoutsText = 'Bora treinar! 💪 Aqui está seu treino para hoje:\n';
+        const videoLinks = [];
+        let exerciseCounter = 1;
         todaysWorkouts.forEach((workout) => {
             workoutsText += `\n*${workout.name}*\n`;
             if (workout.description) workoutsText += `${workout.description.replace(/_/g, '')}\n\n`;
+            // @ts-ignore
             if (workout.workout_exercises && workout.workout_exercises.length > 0) {
                 workoutsText += 'Exercícios:\n';
+                // @ts-ignore
                 workout.workout_exercises.forEach((ex) => {
-                    let exLine = `\n- *${ex.exercise_name}*\n`;
+                    let exLine = `\n${exerciseCounter}. *${ex.exercise_name}*\n`;
                     const details = [
                         ex.sets && `${ex.sets} séries`,
                         ex.reps && `${ex.reps} reps`,
@@ -100,11 +113,26 @@ const actions = {
                     ].filter(Boolean);
                     if (details.length > 0) exLine += `  (${details.join(' / ')})\n`;
                     if (ex.observations) exLine += `  Obs: ${ex.observations}\n`;
+                    // @ts-ignore
+                    const videoUrl = ex.video_url;
+                    if (videoUrl) {
+                        exLine += `  (🎥 Vídeo disponível)\n`;
+                        videoLinks.push(videoUrl);
+                    } else {
+                        videoLinks.push(null);
+                    }
                     workoutsText += exLine;
+                    exerciseCounter++;
                 });
             }
         });
-        return workoutsText.trim();
+        if (videoLinks.some((link) => link !== null)) {
+            workoutsText += `\nPara ver o vídeo de um exercício, digite "vídeo" e o número (ex: *vídeo 1*).`;
+        }
+        return {
+            message: workoutsText.trim(),
+            videoLinks: videoLinks
+        };
     },
     start_goal_conversation: async (supabase, student_phone_number, initial_goal, interaction) => {
         const existingDetails = interaction.goal_details;
@@ -273,8 +301,6 @@ Deno.serve(async (req) => {
                 }
             });
         }
-        // **INÍCIO DA NOVA VERIFICAÇÃO**
-        // 1. Verificar o status da assinatura da organização
         // @ts-ignore
         const subStatus = student.organizations?.subscription_status;
         if (subStatus === 'inactive' || subStatus === 'overdue') {
@@ -287,7 +313,6 @@ Deno.serve(async (req) => {
                 }
             });
         }
-        // 2. Verificar se o admin da organização está ativo
         const { data: adminProfile, error: adminProfileError } = await supabaseAdmin.from('profiles').select('is_active').eq('organization_id', student.organization_id).eq('role', 'admin').single();
         if (adminProfileError || !adminProfile || !adminProfile.is_active) {
             // @ts-ignore
@@ -299,7 +324,6 @@ Deno.serve(async (req) => {
                 }
             });
         }
-        // **FIM DA NOVA VERIFICAÇÃO**
         let { data: interaction } = await supabaseAdmin.from('student_coach_interactions').select('*').eq('student_phone_number', from).single();
         if (!interaction) {
             const { data: newInteraction } = await supabaseAdmin.from('student_coach_interactions').insert({
@@ -311,8 +335,59 @@ Deno.serve(async (req) => {
         }
         let responseMessage = '';
         let toolCall = null;
+        let clearVideoCache = true; // Flag para limpar o cache
+        // --- INÍCIO DA REESTRUTURAÇÃO LÓGICA ---
+        // Regex flexível para "vídeo": aceita 'video', 'vídeo', 'vidio', 'vdeo', etc. seguido de um número
+        const videoCommandMatch = lowerCaseBody.match(/^(?:v[ií]d[e]?o)\s*(\d+)/i);
+        // Regex para pegar apenas um número, caso o usuário digite só "1"
+        const numberOnlyMatch = lowerCaseBody.match(/^(\d+)$/);
+        // Combina as duas regex
+        const finalVideoMatch = videoCommandMatch || numberOnlyMatch;
         if (numMedia > 0 && mediaUrl) {
-            // ... (código de upload de imagem permanece o mesmo)
+            responseMessage = "Recebi sua foto! Se você quiser que eu a publique no Instagram, por favor, envie a foto novamente com a palavra *'postar'* na legenda. 😉";
+        } else if (finalVideoMatch) {
+            // --- LÓGICA DE PEDIR VÍDEO (ALTA PRIORIDADE) ---
+            clearVideoCache = false; // NÃO LIMPAR O CACHE, o usuário pode pedir outro vídeo!
+            const videoIndex = parseInt(finalVideoMatch[1], 10) - 1; // "video 1" ou "1" é o índice 0
+            // @ts-ignore
+            const lastLinks = interaction.last_workout_video_links;
+            if (lastLinks && videoIndex >= 0 && videoIndex < lastLinks.length) {
+                const link = lastLinks[videoIndex];
+                if (link) {
+                    responseMessage = `Aqui está o vídeo do exercício ${videoIndex + 1}:\n\n${link}`;
+                    // NÃO limpamos o cache aqui, para permitir pedir "vídeo 2"
+                } else {
+                    responseMessage = `Desculpe, o exercício ${videoIndex + 1} não tem um vídeo cadastrado. 😕`;
+                }
+            } else if (lastLinks) {
+                responseMessage = `Não encontrei o exercício número ${videoIndex + 1}. Por favor, verifique o número.`;
+            } else {
+                // Se não há cache, verificamos se a IA deve ser chamada (ex: "1" para "modalidades")
+                // Se o comando foi "video 1", ele não deve ir pra IA.
+                if (videoCommandMatch) {
+                    responseMessage = `Você precisa pedir o "meu treino" primeiro para eu saber quais vídeos você quer ver. 😉`;
+                } else {
+                    // É só um número "1", "2", etc. Deixa a IA decidir.
+                    clearVideoCache = true; // Deixa a IA tratar
+                }
+            }
+            // Se a IA não foi acionada, pulamos para o final
+            if (!clearVideoCache) {
+                // Não faz nada, a responseMessage já está pronta
+            } else {
+                // Deixa a IA tratar o "1" (pode ser "modalidades")
+                const { data: org } = await supabaseAdmin.from('organizations').select('name').eq('id', student.organization_id).single();
+                const context = `Nome do Aluno: ${student.name}. Academia: ${org?.name || 'nossa academia'}.`;
+                const aiMessage = await getAiResponse(body, context, openaiApiKey);
+                if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
+                    toolCall = aiMessage.tool_calls[0].function;
+                } else if (aiMessage.content) {
+                    responseMessage = aiMessage.content;
+                } else {
+                    responseMessage = GREETING_MESSAGE(student.name);
+                }
+            }
+            // --- FIM DA LÓGICA DE VÍDEO ---
         } else if (interaction.conversation_state === 'gathering_info' && body) {
             const parsedDetails = parseGoalDetails(body);
             const goal_details = {
@@ -364,6 +439,7 @@ Deno.serve(async (req) => {
         } else if (lowerCaseBody === 'não') {
             responseMessage = "Ok, ação cancelada. Se precisar de algo mais, é só chamar! 👍";
         } else if (body) {
+            // --- CHAMADA DA IA (FALLBACK) ---
             const { data: org } = await supabaseAdmin.from('organizations').select('name').eq('id', student.organization_id).single();
             const context = `Nome do Aluno: ${student.name}. Academia: ${org?.name || 'nossa academia'}.`;
             const aiMessage = await getAiResponse(body, context, openaiApiKey);
@@ -375,20 +451,42 @@ Deno.serve(async (req) => {
                 responseMessage = GREETING_MESSAGE(student.name);
             }
         } else {
+            // Mensagem de saudação inicial (sem 'body')
             responseMessage = GREETING_MESSAGE(student.name);
         }
+        // <<< FIM DA REESTRUTURAÇÃO LÓGICA >>>
         if (toolCall) {
             const actionFn = actions[toolCall.name];
             if (actionFn) {
                 if (toolCall.name === 'start_goal_conversation') {
                     const args = JSON.parse(toolCall.arguments || '{}');
                     responseMessage = await actions.start_goal_conversation(supabaseAdmin, from, args.initial_goal, interaction);
+                } else if (toolCall.name === 'get_today_workout') {
+                    // --- MODIFICAÇÃO AQUI (SALVAR CACHE) ---
+                    clearVideoCache = false; // NÃO LIMPAR O CACHE, acabamos de setá-lo!
+                    // @ts-ignore
+                    const workoutResult = await actions.get_today_workout(supabaseAdmin, student);
+                    responseMessage = workoutResult.message;
+                    // Salva os links de vídeo no cache do bot
+                    await supabaseAdmin.from('student_coach_interactions')// @ts-ignore
+                        .update({
+                            last_workout_video_links: workoutResult.videoLinks
+                        }).eq('student_phone_number', from);
+                    // --- FIM DA MODIFICAÇÃO ---
                 } else {
+                    // @ts-ignore
                     responseMessage = await actionFn(supabaseAdmin, student);
                 }
             } else {
                 responseMessage = "Não entendi o que você quis dizer. 🤔 Pode tentar de outra forma?";
             }
+        }
+        // --- LÓGICA DE LIMPEZA DE CACHE (CORRIGIDA) ---
+        // Limpa o cache se a flag for true (ou seja, não foi um pedido de "video X" nem "meu treino")
+        if (clearVideoCache) {
+            await supabaseAdmin.from('student_coach_interactions').update({
+                last_workout_video_links: null
+            }).eq('student_phone_number', from);
         }
         const twiml = createTwiMLResponse1(responseMessage);
         return new Response(twiml, {
